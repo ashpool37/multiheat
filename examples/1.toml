@@ -1,0 +1,127 @@
+[multiheat]
+version = "0.0.1"
+temp-unit = "K"
+
+[[hot]]
+in = 315.1
+load = 1.96
+
+[[hot]]
+in = 315.3
+out = 293.1
+rate = 0.0005
+
+[[hot]]
+in = 325.6
+out = 293.1
+rate = 0.006
+
+[[hot]]
+in = 329.6
+out = 293.1
+rate = 0.003
+
+[[hot]]
+in = 341.4
+out = 335.8
+rate = 0.398
+
+[[hot]]
+in = 347.3
+out = 339.6
+rate = 0.118
+
+[[hot]]
+in = 349.2
+out = 339.1
+rate = 0.287
+
+[[hot]]
+in = 350.9
+load = 1.07
+
+[[hot]]
+in = 356.1
+out = 303.1
+rate = 0.001
+
+[[hot]]
+in = 359.1
+out = 293.1
+rate = 0.037
+
+[[hot]]
+in = 372.7
+load = 7.75
+
+[[hot]]
+in = 374
+out = 325.7
+rate = 0.006
+
+[[hot]]
+in = 375.9
+out = 319.7
+rate = 0.006
+
+[[hot]]
+in = 375.9
+out = 293.1
+rate = 0.006
+
+[[hot]]
+in = 399.3
+out = 303
+rate = 0.011
+
+[[hot]]
+in = 419.1
+out = 406
+rate = 0.318
+
+[[hot]]
+in = 421.5
+out = 407.1
+rate = 0.068
+
+[[cold]]
+in = 301.1
+out = 338.1
+rate = 0.046
+
+[[cold]]
+in = 303.2
+out = 365.1
+rate = 0.005
+
+[[cold]]
+in = 329.6
+load = 1.89
+
+[[cold]]
+in = 346.4
+out = 367.7
+rate = 0.035
+
+[[cold]]
+in = 359.2
+load = 6.62
+
+[[cold]]
+in = 372.8
+out = 375.8
+rate = 0.260
+
+[[cold]]
+in = 399.3
+load = 7.09
+
+[[cold]]
+in = 399.3
+out = 420
+rate = 0.047
+
+[[cold]]
+in = 418.2
+out = 421.4
+rate = 1.491

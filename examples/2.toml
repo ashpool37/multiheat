@@ -1,0 +1,21 @@
+[multiheat]
+version = "0.0.1"
+temp-unit = "K"
+
+[[hot]]
+in = 430
+out = 380
+rate = 0.0400
+
+[[hot]]
+in = 425
+load = 3
+
+[[cold]]
+in = 410
+load = 4
+
+[[cold]]
+in = 390
+out = 420
+rate = 0.0300
