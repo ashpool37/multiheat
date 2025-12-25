@@ -14,12 +14,20 @@ pub fn renderMermaid(
 
     try writer.writeAll("sequenceDiagram\n");
 
-    // Объявление участников (горячие и холодные потоки)
-    for (system.hot_streams, 0..) |_, i| {
+    // Объявление участников (горячие и холодные потоки) и примечания с температурами
+    for (system.hot_streams, 0..) |hs, i| {
         try writer.print("    participant H{d} as Hot {d}\n", .{ i, i });
+        try writer.print(
+            "    Note right of H{d}: Tin={d:.1}<br/>Tout={d:.1}\n",
+            .{ i, hs.in_temp_K, hs.out_temp_K },
+        );
     }
-    for (system.cold_streams, 0..) |_, i| {
+    for (system.cold_streams, 0..) |cs, i| {
         try writer.print("    participant C{d} as Cold {d}\n", .{ i, i });
+        try writer.print(
+            "    Note left of C{d}: Tin={d:.1}<br/>Tout={d:.1}\n",
+            .{ i, cs.in_temp_K, cs.out_temp_K },
+        );
     }
 
     // Для односторонних утилит понадобится создать участника по мере надобности
@@ -43,6 +51,7 @@ pub fn renderMermaid(
                 "    participant Uc{d} as Cooler {d}\n",
                 .{ util_hot_count, util_hot_count },
             );
+
             try writer.print(
                 "    H{d}->>Uc{d}: Ex {d} (load={d:.3})\n",
                 .{ h, util_hot_count, idx, loadf },
@@ -54,6 +63,7 @@ pub fn renderMermaid(
                 "    participant Uh{d} as Heater {d}\n",
                 .{ util_cold_count, util_cold_count },
             );
+
             try writer.print(
                 "    Uh{d}->>C{d}: Ex {d} (load={d:.3})\n",
                 .{ util_cold_count, c, idx, loadf },
