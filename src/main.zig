@@ -7,13 +7,15 @@ const config = @import("config");
 
 const Command = enum {
     help,
+    checkinput,
     verify,
     solve,
 };
 
 const main_params = clap.parseParamsComptime(
     \\-h, --help        Команда: напечатать инструкцию (этот текст).
-    \\--verify          Команда: проверить корректность входных данных или решения.
+    \\--checkinput      Команда: проверить корректность входных данных.
+    \\--verify          Команда: проверить корректность готового решения.
     \\--solve           Команда: найти решение системы (вывод в формате TOML)
     \\--terse           Вывести только таблицу [[exchanger]].
     \\<input_file>      Путь до файла с описанием системы в формате TOML.
@@ -44,12 +46,14 @@ pub fn main() !void {
     };
     defer res.deinit();
 
-    const sumCommands = res.args.verify + res.args.solve;
+    const sumCommands = res.args.checkinput + res.args.verify + res.args.solve;
     if (sumCommands > 1)
         return error.MultipleCommandsSpecified;
     const command =
         if (res.args.help != 0)
             Command.help
+        else if (res.args.checkinput != 0)
+            Command.checkinput
         else if (res.args.verify != 0)
             Command.verify
         else if (res.args.solve != 0)
@@ -66,9 +70,13 @@ pub fn main() !void {
                 .spacing_between_parameters = 0,
             });
         },
+        .checkinput => {
+            if (res.positionals.len < 1) return error.NotEnoughArguments;
+            try checkInputMain(allocator, res);
+        },
         .verify => {
             if (res.positionals.len < 1) return error.NotEnoughArguments;
-            try verifyMain(allocator, res);
+            try verifySolutionMain(allocator, res);
         },
         .solve => {
             if (res.positionals.len < 1) return error.NotEnoughArguments;
@@ -77,12 +85,24 @@ pub fn main() !void {
     }
 }
 
-fn verifyMain(allocator: std.mem.Allocator, args: MainArgs) !void {
+fn checkInputMain(allocator: std.mem.Allocator, args: MainArgs) !void {
     const result = try config.parse(allocator, args.positionals[0].?);
     defer result.deinit();
 
     const conf = result.value;
     if (!conf.isValid()) return error.InvalidConfiguration;
+}
+
+fn verifySolutionMain(allocator: std.mem.Allocator, args: MainArgs) !void {
+    const result = try config.parse(allocator, args.positionals[0].?);
+    defer result.deinit();
+
+    const conf = result.value;
+    if (!conf.isValid()) return error.InvalidConfiguration;
+
+    var system = try conf.toSystem(allocator);
+    if (system.exchangers.len == 0) return error.MissingSolution;
+    try multiheat.verifySolution(allocator, &system);
 }
 
 fn solveMain(allocator: std.mem.Allocator, args: MainArgs) !void {

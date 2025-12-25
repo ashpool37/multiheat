@@ -88,6 +88,8 @@ pub const HeatExchanger = struct {
 
     pub fn toSystem(self: *const HeatExchanger) common.HeatExchanger {
         var result: common.HeatExchanger = undefined;
+        result.hot_end = null;
+        result.cold_end = null;
         result.load_MW = self.load;
         if (self.hot) |hot| result.hot_end = hot;
         if (self.cold) |cold| result.cold_end = cold;

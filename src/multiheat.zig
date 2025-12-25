@@ -4,6 +4,7 @@ const common = @import("common");
 pub const Error = error{
     Infeasible,
     NoCompatiblePair,
+    Unbalanced,
 };
 
 const Side = enum { hot, cold };
@@ -273,4 +274,37 @@ pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
     }
 
     system.exchangers = try exchangers.toOwnedSlice(allocator);
+}
+
+// Проверка баланса готового решения: сумма тепловых нагрузок должна совпадать для горячей и холодной стороны.
+pub fn verifySolution(allocator: std.mem.Allocator, system: *const common.HeatSystem) !void {
+    _ = allocator;
+    const eps: f32 = 1e-3;
+
+    const hot_len = system.hot_streams.len;
+    const cold_len = system.cold_streams.len;
+
+    var total_hot_req: f32 = 0;
+    var total_cold_req: f32 = 0;
+    for (system.hot_streams) |s| total_hot_req += computeRequiredLoad(s);
+    for (system.cold_streams) |s| total_cold_req += computeRequiredLoad(s);
+
+    var total_hot_got: f32 = 0;
+    var total_cold_got: f32 = 0;
+
+    for (system.exchangers) |ex| {
+        if (ex.hot_end == null and ex.cold_end == null) return Error.Unbalanced;
+        if (!(ex.load_MW > 0)) return Error.Unbalanced;
+        if (ex.hot_end) |h| {
+            if (h >= hot_len) return Error.Unbalanced;
+            total_hot_got += ex.load_MW;
+        }
+        if (ex.cold_end) |c| {
+            if (c >= cold_len) return Error.Unbalanced;
+            total_cold_got += ex.load_MW;
+        }
+    }
+
+    if (@abs(total_hot_got - total_hot_req) > eps) return Error.Unbalanced;
+    if (@abs(total_cold_got - total_cold_req) > eps) return Error.Unbalanced;
 }
