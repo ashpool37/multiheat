@@ -8,11 +8,13 @@ const config = @import("config");
 const Command = enum {
     help,
     verify,
+    solve,
 };
 
 const main_params = clap.parseParamsComptime(
     \\-h, --help        Команда: напечатать инструкцию (этот текст).
     \\--verify          Команда: проверить корректность входных данных или решения.
+    \\--solve           Команда: найти решение системы (вывод в формате TOML)
     \\<input_file>      Путь до файла с описанием системы в формате TOML.
 );
 
@@ -41,11 +43,16 @@ pub fn main() !void {
     };
     defer res.deinit();
 
+    const sumCommands = res.args.verify + res.args.solve;
+    if (sumCommands > 1)
+        return error.MultipleCommandsSpecified;
     const command =
         if (res.args.help != 0)
             Command.help
         else if (res.args.verify != 0)
             Command.verify
+        else if (res.args.solve != 0)
+            Command.solve
         else
             Command.help;
     switch (command) {
@@ -62,6 +69,10 @@ pub fn main() !void {
             if (res.positionals.len < 1) return error.NotEnoughArguments;
             try verifyMain(allocator, res);
         },
+        .solve => {
+            if (res.positionals.len < 1) return error.NotEnoughArguments;
+            try solveMain(allocator, res);
+        },
     }
 }
 
@@ -71,4 +82,14 @@ fn verifyMain(allocator: std.mem.Allocator, args: MainArgs) !void {
 
     const conf = result.value;
     if (!conf.isValid()) return error.InvalidConfiguration;
+}
+
+fn solveMain(allocator: std.mem.Allocator, args: MainArgs) !void {
+    const result = try config.parse(allocator, args.positionals[0].?);
+    defer result.deinit();
+
+    const conf = result.value;
+    if (!conf.isValid()) return error.InvalidConfiguration;
+
+    _ = try conf.toSystem(allocator);
 }
