@@ -14,6 +14,9 @@ pub fn build(b: *std.Build) void {
     const mod_multiheat = b.addModule("multiheat", .{
         .root_source_file = b.path("src/multiheat.zig"),
         .target = target,
+        .imports = &.{
+            .{ .name = "common", .module = mod_common },
+        },
     });
     const mod_config = b.addModule("config", .{
         .root_source_file = b.path("src/config.zig"),

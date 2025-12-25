@@ -2,7 +2,7 @@ const std = @import("std");
 
 const clap = @import("clap");
 
-// const multiheat = @import("multiheat");
+const multiheat = @import("multiheat");
 const config = @import("config");
 
 const Command = enum {
@@ -91,5 +91,11 @@ fn solveMain(allocator: std.mem.Allocator, args: MainArgs) !void {
     const conf = result.value;
     if (!conf.isValid()) return error.InvalidConfiguration;
 
-    _ = try conf.toSystem(allocator);
+    const system = try conf.toSystem(allocator);
+
+    const stdout_file = std.fs.File.stdout();
+    var buf: [4096]u8 = undefined;
+    var stdout = std.fs.File.Writer.init(stdout_file, buf[0..]);
+    try multiheat.solveAndWrite(allocator, system, &stdout.interface);
+    try stdout.interface.flush();
 }
