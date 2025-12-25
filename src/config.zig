@@ -57,7 +57,7 @@ pub const HeatStream = struct {
         return result;
     }
 
-    // Выгружает поток в TOML c указанным именем секции (например, "hot" или "cold")
+    // Формирует TOML-представление параметров потока в заданном разделе (например, «hot» или «cold»)
     pub fn dumpToml(self: *const HeatStream, writer: anytype, comptime section: []const u8) !void {
         try writer.print("[[{s}]]\n", .{section});
         try writer.print("in = {d}\n", .{self.in});
@@ -104,7 +104,7 @@ pub const HeatExchanger = struct {
         };
     }
 
-    // Выгружает один теплообменник в TOML
+    // Формирует TOML-запись теплообменного аппарата
     pub fn dumpToml(self: *const HeatExchanger, writer: anytype) !void {
         try writer.writeAll("[[exchanger]]\n");
         if (self.hot) |h| try writer.print("hot = {d}\n", .{h});
@@ -164,7 +164,7 @@ pub const Config = struct {
         return result;
     }
 
-    // Полная выгрузка конфигурации в TOML: секция multiheat, потоки и обменники
+    // Формирует полное TOML-описание конфигурации: заголовок multiheat, перечень потоков и теплообменных аппаратов
     pub fn dumpToml(self: *const Config, writer: anytype) !void {
         try writer.writeAll("[multiheat]\n");
         try writer.print("version = \"{s}\"\n", .{self.multiheat.version});

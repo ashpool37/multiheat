@@ -2,9 +2,9 @@ const std = @import("std");
 const common = @import("common");
 const multiheat = @import("multiheat");
 
-/// Выводит систему в формате mermaid sequenceDiagram. Горячие и холодные потоки
-/// отображаются как участники; теплообменники — как сообщения между ними; утилиты
-/// показываются как отдельные участники.
+/// Формирует представление теплообменной системы в виде mermaid sequenceDiagram.
+/// Горячие и холодные потоки трактуются как участники процесса; теплообменники — как
+/// акт передачи тепловой мощности; односторонние утилиты отражаются отдельными участниками.
 pub fn renderMermaid(
     allocator: std.mem.Allocator,
     system: *const common.HeatSystem,
@@ -14,7 +14,7 @@ pub fn renderMermaid(
 
     try writer.writeAll("sequenceDiagram\n");
 
-    // Объявление участников (горячие и холодные потоки) с температурами во входе/выходе
+    // Объявление участников (горячие и холодные потоки) с фиксацией температур на входе и выходе
     for (system.hot_streams, 0..) |hs, i| {
         try writer.print(
             "    participant H{d} as Hot {d} (Tin={d:.1}, Tout={d:.1})\n",
@@ -28,11 +28,11 @@ pub fn renderMermaid(
         );
     }
 
-    // Для односторонних утилит понадобится создать участника по мере надобности
+    // Для односторонних утилит создаётся отдельный участник по факту обнаружения такого аппарата
     var util_hot_count: usize = 0;
     var util_cold_count: usize = 0;
 
-    // Сообщения теплообменников
+    // Представление теплообменных аппаратов в виде направленных сообщений с величиной тепловой нагрузки
     for (system.exchangers, 0..) |ex, idx| {
         const loadf = @as(f64, @floatCast(ex.load_MW));
 
@@ -70,7 +70,7 @@ pub fn renderMermaid(
         } else {
             // Обменник без концов — считаем невалидным, но всё равно отобразим
             try writer.print(
-                "    Note over Ex{d}: invalid exchanger with load={d:.3}\n",
+                "    Note over Ex{d}: недопустимое соединение теплообменного аппарата, нагрузка={d:.3}\n",
                 .{ idx, loadf },
             );
         }

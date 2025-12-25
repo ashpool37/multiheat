@@ -15,8 +15,8 @@ const StreamState = struct {
     isothermal: bool,
     temp: f32,
     target: f32,
-    rate: f32, // MW/K; zero for isothermal
-    rem: f32, // MW remaining to transfer (always >= 0)
+    rate: f32, // МВт/К; нулевое значение для изотермических участков
+    rem: f32, // Остаточная тепловая нагрузка, подлежащая передаче (МВт)
 };
 
 pub fn computeRequiredLoad(stream: common.HeatStream) f32 {
@@ -84,7 +84,7 @@ fn maxTransferable(
         const q_lim = @min(q_dt, q_hot_target);
         return if (q_lim <= 0) null else q_lim;
     } else {
-        // both isothermal
+        // Оба потока изотермические: единственное ограничение — минимально допустимый температурный напор
         return if (d0 < dt_min - eps) null else std.math.inf(f32);
     }
 }
@@ -112,7 +112,7 @@ pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
     var exchangers = try std.ArrayList(common.HeatExchanger).initCapacity(allocator, 0);
     errdefer exchangers.deinit(allocator);
 
-    // Основной жадный цикл с добавлением утилит при отсутствии совместимых пар
+    // Жадный перебор пар с постановкой односторонних утилит при отсутствии совместимости
     while (true) {
         var cold_idx: ?usize = null;
         var cold_best_temp: f32 = -std.math.inf(f32);
@@ -140,7 +140,7 @@ pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
 
         const cold_sel_idx = cold_idx;
         if (cold_sel_idx == null) {
-            // No cold with a compatible hot: attach heater to the hottest remaining cold
+            // При отсутствии совместимого горячего потока нагреватель ставится на наиболее горячий из оставшихся холодных
             var worst_idx: ?usize = null;
             var worst_temp: f32 = -std.math.inf(f32);
             for (cold_states, 0..) |c, i| {
@@ -159,7 +159,7 @@ pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
                 cold_states[wi].rem = 0.0;
                 continue;
             }
-            break; // all cold satisfied
+            break; // все холодные потоки удовлетворены
         }
 
         const cstate = cold_states[cold_sel_idx.?];
@@ -178,7 +178,7 @@ pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
         }
 
         if (hot_idx == null) {
-            // No compatible hot: add heater utility to this cold stream
+            // При отсутствии совместимого горячего потока остаток холодного покрывается нагревателем
             try exchangers.append(allocator, .{
                 .hot_end = null,
                 .cold_end = cstate.index,
@@ -192,7 +192,7 @@ pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
 
         const q_limit_opt = maxTransferable(hstate, cstate, dt_min);
         if (q_limit_opt == null) {
-            // Температурно несовместимо: ставим нагреватель на холодный поток
+            // Температурная несовместимость: весь остаток холодного покрывается нагревателем
             try exchangers.append(allocator, .{
                 .hot_end = null,
                 .cold_end = cstate.index,
@@ -205,7 +205,7 @@ pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
         q_hex = @min(q_hex, hstate.rem);
         q_hex = @min(q_hex, cstate.rem);
         if (q_hex <= eps) {
-            // Вырожденный перенос: переводим остаток в нагреватель на холодном потоке
+            // Вырожденный режим: остаток холодного перекладывается на нагреватель
             try exchangers.append(allocator, .{
                 .hot_end = null,
                 .cold_end = cstate.index,
@@ -215,14 +215,14 @@ pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
             continue;
         }
 
-        // Записываем теплообменник
+        // Фиксация синтезированного теплообменного аппарата
         try exchangers.append(allocator, .{
             .hot_end = hstate.index,
             .cold_end = cstate.index,
             .load_MW = q_hex,
         });
 
-        // Обновляем состояния потоков
+        // Коррекция текущих температурных состояний потоков
         if (!hot_states[hot_idx.?].isothermal and hot_states[hot_idx.?].rate > eps)
             hot_states[hot_idx.?].temp -= q_hex / hot_states[hot_idx.?].rate;
         if (!cold_states[cold_sel_idx.?].isothermal and cold_states[cold_sel_idx.?].rate > eps)
@@ -232,7 +232,7 @@ pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
         cold_states[cold_sel_idx.?].rem -= q_hex;
     }
 
-    // Финальные остатки: минимальные односторонние утилиты, по одной на каждую сторону
+    // Финальные несбалансированные нагрузки покрываются минимальным числом односторонних утилит
     var residual_hot: f32 = 0.0;
     for (hot_states) |h| residual_hot += h.rem;
     var residual_cold: f32 = 0.0;
@@ -276,7 +276,7 @@ pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
     system.exchangers = try exchangers.toOwnedSlice(allocator);
 }
 
-// Проверка баланса готового решения: сумма тепловых нагрузок должна совпадать для горячей и холодной стороны.
+// Проверка баланса готового решения: суммарные тепловые нагрузки горячей и холодной подсистем должны совпадать.
 pub fn verifySolution(allocator: std.mem.Allocator, system: *const common.HeatSystem) !void {
     _ = allocator;
     const eps: f32 = 1e-3;
