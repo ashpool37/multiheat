@@ -14,19 +14,17 @@ pub fn renderMermaid(
 
     try writer.writeAll("sequenceDiagram\n");
 
-    // Объявление участников (горячие и холодные потоки) и примечания с температурами
+    // Объявление участников (горячие и холодные потоки) с температурами во входе/выходе
     for (system.hot_streams, 0..) |hs, i| {
-        try writer.print("    participant H{d} as Hot {d}\n", .{ i, i });
         try writer.print(
-            "    Note right of H{d}: Tin={d:.1}<br/>Tout={d:.1}\n",
-            .{ i, hs.in_temp_K, hs.out_temp_K },
+            "    participant H{d} as Hot {d} (Tin={d:.1}, Tout={d:.1})\n",
+            .{ i, i, hs.in_temp_K, hs.out_temp_K },
         );
     }
     for (system.cold_streams, 0..) |cs, i| {
-        try writer.print("    participant C{d} as Cold {d}\n", .{ i, i });
         try writer.print(
-            "    Note left of C{d}: Tin={d:.1}<br/>Tout={d:.1}\n",
-            .{ i, cs.in_temp_K, cs.out_temp_K },
+            "    participant C{d} as Cold {d} (Tin={d:.1}, Tout={d:.1})\n",
+            .{ i, i, cs.in_temp_K, cs.out_temp_K },
         );
     }
 
