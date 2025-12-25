@@ -15,6 +15,7 @@ const main_params = clap.parseParamsComptime(
     \\-h, --help        Команда: напечатать инструкцию (этот текст).
     \\--verify          Команда: проверить корректность входных данных или решения.
     \\--solve           Команда: найти решение системы (вывод в формате TOML)
+    \\--terse           Вывести только таблицу [[exchanger]].
     \\<input_file>      Путь до файла с описанием системы в формате TOML.
 );
 
@@ -85,19 +86,33 @@ fn verifyMain(allocator: std.mem.Allocator, args: MainArgs) !void {
 }
 
 fn solveMain(allocator: std.mem.Allocator, args: MainArgs) !void {
-    const result = try config.parse(allocator, args.positionals[0].?);
+    const input_path = args.positionals[0].?;
+    const original = try std.fs.cwd().readFileAlloc(allocator, input_path, std.math.maxInt(usize));
+    defer allocator.free(original);
+
+    const result = try config.parse(allocator, input_path);
     defer result.deinit();
 
     const conf = result.value;
     if (!conf.isValid()) return error.InvalidConfiguration;
 
     var system = try conf.toSystem(allocator);
-
     try multiheat.solve(allocator, &system);
 
+    const terse = args.args.terse != 0;
+
     const stdout_file = std.fs.File.stdout();
-    var buf: [4096]u8 = undefined;
-    var stdout = std.fs.File.Writer.init(stdout_file, buf[0..]);
+
+    const out_buf = try allocator.alloc(u8, 65536);
+    defer allocator.free(out_buf);
+    var stdout = std.fs.File.Writer.init(stdout_file, out_buf);
+
+    if (!terse) {
+        try stdout.interface.writeAll(original);
+        if (!std.mem.endsWith(u8, original, "\n"))
+            try stdout.interface.writeByte('\n');
+        try stdout.interface.writeByte('\n');
+    }
 
     for (system.exchangers) |ex| {
         const hex = config.HeatExchanger.fromSystem(ex);

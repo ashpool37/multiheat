@@ -56,6 +56,22 @@ pub const HeatStream = struct {
         }
         return result;
     }
+
+    // Выгружает поток в TOML c указанным именем секции (например, "hot" или "cold")
+    pub fn dumpToml(self: *const HeatStream, writer: anytype, comptime section: []const u8) !void {
+        try writer.print("[[{s}]]\n", .{section});
+        try writer.print("in = {d}\n", .{self.in});
+        if (self.out) |out_val| {
+            try writer.print("out = {d}\n", .{out_val});
+        }
+        if (self.rate) |rate_val| {
+            try writer.print("rate = {d}\n", .{rate_val});
+        }
+        if (self.load) |load_val| {
+            try writer.print("load = {d}\n", .{load_val});
+        }
+        try writer.writeAll("\n");
+    }
 };
 
 pub const HeatExchanger = struct {
@@ -86,6 +102,7 @@ pub const HeatExchanger = struct {
         };
     }
 
+    // Выгружает один теплообменник в TOML
     pub fn dumpToml(self: *const HeatExchanger, writer: anytype) !void {
         try writer.writeAll("[[exchanger]]\n");
         if (self.hot) |h| try writer.print("hot = {d}\n", .{h});
@@ -143,6 +160,25 @@ pub const Config = struct {
             exchanger.* = self.exchanger.?[i].toSystem();
         }
         return result;
+    }
+
+    // Полная выгрузка конфигурации в TOML: секция multiheat, потоки и обменники
+    pub fn dumpToml(self: *const Config, writer: anytype) !void {
+        try writer.writeAll("[multiheat]\n");
+        try writer.print("version = \"{s}\"\n", .{self.multiheat.version});
+        try writer.print("temp_unit = \"{s}\"\n\n", .{self.multiheat.temp_unit});
+
+        for (self.hot) |h| {
+            try h.dumpToml(writer, "hot");
+        }
+        for (self.cold) |c| {
+            try c.dumpToml(writer, "cold");
+        }
+        if (self.exchanger) |exchs| {
+            for (exchs) |ex| {
+                try ex.dumpToml(writer);
+            }
+        }
     }
 };
 

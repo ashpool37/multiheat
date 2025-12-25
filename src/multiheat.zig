@@ -111,7 +111,7 @@ pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
     var exchangers = try std.ArrayList(common.HeatExchanger).initCapacity(allocator, 0);
     errdefer exchangers.deinit(allocator);
 
-    // Main greedy loop with pinch-relief utilities
+    // Основной жадный цикл с добавлением утилит при отсутствии совместимых пар
     while (true) {
         var cold_idx: ?usize = null;
         var cold_best_temp: f32 = -std.math.inf(f32);
@@ -191,7 +191,7 @@ pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
 
         const q_limit_opt = maxTransferable(hstate, cstate, dt_min);
         if (q_limit_opt == null) {
-            // Incompatible by temperature: use heater on cold stream
+            // Температурно несовместимо: ставим нагреватель на холодный поток
             try exchangers.append(allocator, .{
                 .hot_end = null,
                 .cold_end = cstate.index,
@@ -204,7 +204,7 @@ pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
         q_hex = @min(q_hex, hstate.rem);
         q_hex = @min(q_hex, cstate.rem);
         if (q_hex <= eps) {
-            // Degenerate transfer: fall back to utility on cold
+            // Вырожденный перенос: переводим остаток в нагреватель на холодном потоке
             try exchangers.append(allocator, .{
                 .hot_end = null,
                 .cold_end = cstate.index,
@@ -214,14 +214,14 @@ pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
             continue;
         }
 
-        // Record exchanger
+        // Записываем теплообменник
         try exchangers.append(allocator, .{
             .hot_end = hstate.index,
             .cold_end = cstate.index,
             .load_MW = q_hex,
         });
 
-        // Update states
+        // Обновляем состояния потоков
         if (!hot_states[hot_idx.?].isothermal and hot_states[hot_idx.?].rate > eps)
             hot_states[hot_idx.?].temp -= q_hex / hot_states[hot_idx.?].rate;
         if (!cold_states[cold_sel_idx.?].isothermal and cold_states[cold_sel_idx.?].rate > eps)
@@ -231,7 +231,7 @@ pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
         cold_states[cold_sel_idx.?].rem -= q_hex;
     }
 
-    // Final residuals: minimal one-ended utilities, one per side
+    // Финальные остатки: минимальные односторонние утилиты, по одной на каждую сторону
     var residual_hot: f32 = 0.0;
     for (hot_states) |h| residual_hot += h.rem;
     var residual_cold: f32 = 0.0;
