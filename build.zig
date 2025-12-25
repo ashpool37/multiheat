@@ -18,6 +18,14 @@ pub fn build(b: *std.Build) void {
             .{ .name = "common", .module = mod_common },
         },
     });
+    const mod_graph = b.addModule("graph", .{
+        .root_source_file = b.path("src/graph.zig"),
+        .target = target,
+        .imports = &.{
+            .{ .name = "common", .module = mod_common },
+            .{ .name = "multiheat", .module = mod_multiheat },
+        },
+    });
     const mod_config = b.addModule("config", .{
         .root_source_file = b.path("src/config.zig"),
         .target = target,
@@ -35,6 +43,7 @@ pub fn build(b: *std.Build) void {
             .imports = &.{
                 .{ .name = "common", .module = mod_common },
                 .{ .name = "multiheat", .module = mod_multiheat },
+                .{ .name = "graph", .module = mod_graph },
                 .{ .name = "config", .module = mod_config },
                 .{ .name = "clap", .module = clap.module("clap") },
             },

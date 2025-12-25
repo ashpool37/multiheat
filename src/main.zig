@@ -4,12 +4,14 @@ const clap = @import("clap");
 
 const multiheat = @import("multiheat");
 const config = @import("config");
+const graph = @import("graph");
 
 const Command = enum {
     help,
     checkinput,
     verify,
     solve,
+    graph,
 };
 
 const main_params = clap.parseParamsComptime(
@@ -17,6 +19,7 @@ const main_params = clap.parseParamsComptime(
     \\--checkinput      Команда: проверить корректность входных данных.
     \\--verify          Команда: проверить корректность готового решения.
     \\--solve           Команда: найти решение системы (вывод в формате TOML)
+    \\--graph           Команда: вывести mermaid-граф системы (решённой при необходимости).
     \\--terse           Вывести только таблицу [[exchanger]].
     \\<input_file>      Путь до файла с описанием системы в формате TOML.
 );
@@ -46,7 +49,7 @@ pub fn main() !void {
     };
     defer res.deinit();
 
-    const sumCommands = res.args.checkinput + res.args.verify + res.args.solve;
+    const sumCommands = res.args.checkinput + res.args.verify + res.args.solve + res.args.graph;
     if (sumCommands > 1)
         return error.MultipleCommandsSpecified;
     const command =
@@ -58,6 +61,8 @@ pub fn main() !void {
             Command.verify
         else if (res.args.solve != 0)
             Command.solve
+        else if (res.args.graph != 0)
+            Command.graph
         else
             Command.help;
     switch (command) {
@@ -81,6 +86,10 @@ pub fn main() !void {
         .solve => {
             if (res.positionals.len < 1) return error.NotEnoughArguments;
             try solveMain(allocator, res);
+        },
+        .graph => {
+            if (res.positionals.len < 1) return error.NotEnoughArguments;
+            try graphMain(allocator, res);
         },
     }
 }
@@ -138,5 +147,25 @@ fn solveMain(allocator: std.mem.Allocator, args: MainArgs) !void {
         const hex = config.HeatExchanger.fromSystem(ex);
         try hex.dumpToml(&stdout.interface);
     }
+    try stdout.interface.flush();
+}
+
+// Вывод mermaid-графа системы; если обменники отсутствуют, сперва решаем.
+fn graphMain(allocator: std.mem.Allocator, args: MainArgs) !void {
+    const input_path = args.positionals[0].?;
+    const result = try config.parse(allocator, input_path);
+    defer result.deinit();
+
+    const conf = result.value;
+    if (!conf.isValid()) return error.InvalidConfiguration;
+
+    var system = try conf.toSystem(allocator);
+
+    const stdout_file = std.fs.File.stdout();
+    const out_buf = try allocator.alloc(u8, 65536);
+    defer allocator.free(out_buf);
+    var stdout = std.fs.File.Writer.init(stdout_file, out_buf);
+
+    try graph.renderMermaid(allocator, &system, &stdout.interface);
     try stdout.interface.flush();
 }

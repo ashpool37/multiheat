@@ -19,7 +19,7 @@ const StreamState = struct {
     rem: f32, // MW remaining to transfer (always >= 0)
 };
 
-fn computeRequiredLoad(stream: common.HeatStream) f32 {
+pub fn computeRequiredLoad(stream: common.HeatStream) f32 {
     if (stream.isothermal) return stream.load_MW;
     return stream.rate_MW_per_K * @abs(stream.out_temp_K - stream.in_temp_K);
 }
