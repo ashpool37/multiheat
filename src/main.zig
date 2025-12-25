@@ -70,7 +70,5 @@ fn verifyMain(allocator: std.mem.Allocator, args: MainArgs) !void {
     defer result.deinit();
 
     const conf = result.value;
-    const system = try conf.toSystem(allocator);
-    // TODO: defer system.deinit();
-    std.debug.print("{}\n", .{system.cold_streams[0].load_MW});
+    if (!conf.isValid()) return error.InvalidConfiguration;
 }
