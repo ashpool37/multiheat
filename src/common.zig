@@ -13,7 +13,7 @@ pub const HeatExchanger = struct {
 };
 
 pub const HeatSystem = struct {
-    hot_streams: []const HeatStream,
-    cold_streams: []const HeatStream,
-    exchangers: []const HeatExchanger,
+    hot_streams: []HeatStream,
+    cold_streams: []HeatStream,
+    exchangers: []HeatExchanger,
 };

@@ -42,7 +42,12 @@ pub fn main() !void {
     defer res.deinit();
 
     const command =
-        if (res.args.help != 0) Command.help else if (res.args.verify != 0) Command.verify else return error.MissingCommand;
+        if (res.args.help != 0)
+            Command.help
+        else if (res.args.verify != 0)
+            Command.verify
+        else
+            return error.MissingCommand;
     switch (command) {
         .help => {
             std.debug.print("Использование:\n    {s} ", .{invocation orelse "multiheat"});
@@ -61,6 +66,11 @@ pub fn main() !void {
 }
 
 fn verifyMain(allocator: std.mem.Allocator, args: MainArgs) !void {
-    const conf = try config.parse(allocator, args.positionals[0] orelse unreachable);
-    std.debug.print("{}\n", .{config.validate(&conf)});
+    const result = try config.parse(allocator, args.positionals[0].?);
+    defer result.deinit();
+
+    const conf = result.value;
+    const system = try conf.toSystem(allocator);
+    // TODO: defer system.deinit();
+    std.debug.print("{}\n", .{system.cold_streams[0].load_MW});
 }

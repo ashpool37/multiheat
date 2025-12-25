@@ -19,6 +19,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/config.zig"),
         .target = target,
         .imports = &.{
+            .{ .name = "common", .module = mod_common },
             .{ .name = "toml", .module = toml.module("toml") },
         },
     });
