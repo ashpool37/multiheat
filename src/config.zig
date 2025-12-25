@@ -77,6 +77,21 @@ pub const HeatExchanger = struct {
         if (self.cold) |cold| result.cold_end = cold;
         return result;
     }
+
+    pub fn fromSystem(src: common.HeatExchanger) HeatExchanger {
+        return .{
+            .hot = src.hot_end,
+            .cold = src.cold_end,
+            .load = src.load_MW,
+        };
+    }
+
+    pub fn dumpToml(self: *const HeatExchanger, writer: anytype) !void {
+        try writer.writeAll("[[exchanger]]\n");
+        if (self.hot) |h| try writer.print("hot = {d}\n", .{h});
+        if (self.cold) |c| try writer.print("cold = {d}\n", .{c});
+        try writer.print("load = {d:.6}\n\n", .{self.load});
+    }
 };
 
 pub const MultiheatOptions = struct {

@@ -91,11 +91,17 @@ fn solveMain(allocator: std.mem.Allocator, args: MainArgs) !void {
     const conf = result.value;
     if (!conf.isValid()) return error.InvalidConfiguration;
 
-    const system = try conf.toSystem(allocator);
+    var system = try conf.toSystem(allocator);
+
+    try multiheat.solve(allocator, &system);
 
     const stdout_file = std.fs.File.stdout();
     var buf: [4096]u8 = undefined;
     var stdout = std.fs.File.Writer.init(stdout_file, buf[0..]);
-    try multiheat.solveAndWrite(allocator, system, &stdout.interface);
+
+    for (system.exchangers) |ex| {
+        const hex = config.HeatExchanger.fromSystem(ex);
+        try hex.dumpToml(&stdout.interface);
+    }
     try stdout.interface.flush();
 }

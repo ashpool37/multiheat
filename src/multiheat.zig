@@ -18,12 +18,6 @@ const StreamState = struct {
     rem: f32, // MW remaining to transfer (always >= 0)
 };
 
-const UtilityPlan = struct {
-    side: Side, // hot -> cooler (dump heat); cold -> heater (supply heat)
-    index: u16,
-    load: f32,
-};
-
 fn computeRequiredLoad(stream: common.HeatStream) f32 {
     if (stream.isothermal) return stream.load_MW;
     return stream.rate_MW_per_K * @abs(stream.out_temp_K - stream.in_temp_K);
@@ -94,75 +88,7 @@ fn maxTransferable(
     }
 }
 
-/// Reserve the utility mismatch on as few streams as possible (greedy by largest remaining duty).
-fn planUtilities(
-    allocator: std.mem.Allocator,
-    hot_states: []StreamState,
-    cold_states: []StreamState,
-    mismatch: f32,
-    side: Side,
-) ![]UtilityPlan {
-    // side == hot  => need coolers (dump heat)
-    // side == cold => need heaters (supply heat)
-    const eps: f32 = 1e-6;
-    if (mismatch <= eps) return &[_]UtilityPlan{};
-
-    var plans = try std.ArrayList(UtilityPlan).initCapacity(allocator, 0);
-    errdefer plans.deinit(allocator);
-
-    var remaining = mismatch;
-    while (remaining > eps) {
-        var best_idx: ?usize = null;
-        var best_cap: f32 = -1.0;
-
-        if (side == .hot) {
-            for (hot_states, 0..) |hs, i| {
-                if (hs.rem > best_cap + eps) {
-                    best_cap = hs.rem;
-                    best_idx = i;
-                }
-            }
-        } else {
-            for (cold_states, 0..) |cs, i| {
-                if (cs.rem > best_cap + eps) {
-                    best_cap = cs.rem;
-                    best_idx = i;
-                }
-            }
-        }
-
-        if (best_idx == null or best_cap <= eps) return Error.Infeasible;
-
-        const idx = best_idx.?;
-        const take = @min(remaining, best_cap);
-        try plans.append(allocator, .{
-            .side = side,
-            .index = if (side == .hot)
-                hot_states[idx].index
-            else
-                cold_states[idx].index,
-            .load = take,
-        });
-
-        if (side == .hot) {
-            hot_states[idx].rem -= take;
-            if (hot_states[idx].rem < eps) hot_states[idx].rem = 0.0;
-        } else {
-            cold_states[idx].rem -= take;
-            if (cold_states[idx].rem < eps) cold_states[idx].rem = 0.0;
-        }
-
-        remaining -= take;
-    }
-
-    return plans.toOwnedSlice(allocator);
-}
-
-/// Greedy synthesis: returns exchangers (process-process + utility) as owned slice.
-pub fn synthesize(
-    allocator: std.mem.Allocator,
-    system: common.HeatSystem,
-) ![]common.HeatExchanger {
+pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
     const dt_min: f32 = @floatFromInt(system.min_dt);
 
     const hot_count = system.hot_streams.len;
@@ -173,24 +99,19 @@ pub fn synthesize(
     defer allocator.free(hot_states);
     defer allocator.free(cold_states);
 
-    var total_hot: f32 = 0;
-    var total_cold: f32 = 0;
+    const eps: f32 = 1e-6;
 
     for (system.hot_streams, 0..) |s, i| {
         hot_states[i] = initState(.hot, @intCast(i), s);
-        total_hot += hot_states[i].rem;
     }
     for (system.cold_streams, 0..) |s, i| {
         cold_states[i] = initState(.cold, @intCast(i), s);
-        total_cold += cold_states[i].rem;
     }
-
-    const eps: f32 = 1e-6;
 
     var exchangers = try std.ArrayList(common.HeatExchanger).initCapacity(allocator, 0);
     errdefer exchangers.deinit(allocator);
 
-    // Main greedy loop
+    // Main greedy loop with pinch-relief utilities
     while (true) {
         var cold_idx: ?usize = null;
         var cold_best_temp: f32 = -std.math.inf(f32);
@@ -218,6 +139,7 @@ pub fn synthesize(
 
         const cold_sel_idx = cold_idx;
         if (cold_sel_idx == null) {
+            // No cold with a compatible hot: attach heater to the hottest remaining cold
             var worst_idx: ?usize = null;
             var worst_temp: f32 = -std.math.inf(f32);
             for (cold_states, 0..) |c, i| {
@@ -309,13 +231,12 @@ pub fn synthesize(
         cold_states[cold_sel_idx.?].rem -= q_hex;
     }
 
-    // Verify no residual duties remain (beyond utilities)
+    // Final residuals: minimal one-ended utilities, one per side
     var residual_hot: f32 = 0.0;
     for (hot_states) |h| residual_hot += h.rem;
     var residual_cold: f32 = 0.0;
     for (cold_states) |c| residual_cold += c.rem;
 
-    // If anything remains unmatched, cover it with minimal one-ended utilities (one per side)
     if (residual_hot > eps) {
         var best_idx: ?u16 = null;
         var best_rem: f32 = 0.0;
@@ -351,34 +272,5 @@ pub fn synthesize(
         }
     }
 
-    return exchangers.toOwnedSlice(allocator);
-}
-
-/// Convenience: run synthesis and write TOML [[exchanger]] list to `writer`.
-pub fn solveAndWrite(
-    allocator: std.mem.Allocator,
-    system: common.HeatSystem,
-    writer: anytype,
-) !void {
-    const exchangers = try synthesize(allocator, system);
-    defer allocator.free(exchangers);
-
-    try writeTomlSolution(writer, exchangers);
-}
-
-/// Emit TOML for the exchangers only (table array [[exchanger]]).
-pub fn writeTomlSolution(
-    writer: anytype,
-    exchangers: []const common.HeatExchanger,
-) !void {
-    for (exchangers) |ex| {
-        try writer.writeAll("[[exchanger]]\n");
-        if (ex.hot_end) |h| {
-            try writer.print("hot = {d}\n", .{h});
-        }
-        if (ex.cold_end) |c| {
-            try writer.print("cold = {d}\n", .{c});
-        }
-        try writer.print("load = {d:.6}\n\n", .{ex.load_MW});
-    }
+    system.exchangers = try exchangers.toOwnedSlice(allocator);
 }
