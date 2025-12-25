@@ -3,7 +3,16 @@
     .version = "0.0.1",
     .fingerprint = 0x7c12a837b638cb6c,
     .minimum_zig_version = "0.15.2",
-    .dependencies = .{},
+    .dependencies = .{
+        .clap = .{
+            .url = "https://github.com/Hejsil/zig-clap/archive/refs/tags/0.11.0.tar.gz",
+            .hash = "clap-0.11.0-oBajB-HnAQDPCKYzwF7rO3qDFwRcD39Q0DALlTSz5H7e",
+        },
+        .toml = .{
+            .url = "git+https://github.com/sam701/zig-toml?ref=zig-0.15#475b03c630c802f8b6bd3e239d8fc2279b4fadb8",
+            .hash = "toml-0.3.0-bV14BfV7AQD8DkuQI7skP8ekQTaBYKTO0MY_35Cw_EXo",
+        },
+    },
     .paths = .{
         "build.zig",
         "build.zig.zon",

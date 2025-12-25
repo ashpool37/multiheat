@@ -1,6 +1,6 @@
 [multiheat]
 version = "0.0.1"
-temp-unit = "K"
+temp_unit = "K"
 
 [[hot]]
 in = 420
