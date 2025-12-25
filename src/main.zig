@@ -47,7 +47,7 @@ pub fn main() !void {
         else if (res.args.verify != 0)
             Command.verify
         else
-            return error.MissingCommand;
+            Command.help;
     switch (command) {
         .help => {
             std.debug.print("Использование:\n    {s} ", .{invocation orelse "multiheat"});
