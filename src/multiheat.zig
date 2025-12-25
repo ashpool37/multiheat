@@ -217,7 +217,27 @@ pub fn synthesize(
         }
 
         const cold_sel_idx = cold_idx;
-        if (cold_sel_idx == null) break; // all cold satisfied
+        if (cold_sel_idx == null) {
+            var worst_idx: ?usize = null;
+            var worst_temp: f32 = -std.math.inf(f32);
+            for (cold_states, 0..) |c, i| {
+                if (c.rem <= eps) continue;
+                if (c.temp > worst_temp) {
+                    worst_temp = c.temp;
+                    worst_idx = i;
+                }
+            }
+            if (worst_idx) |wi| {
+                try exchangers.append(allocator, .{
+                    .hot_end = null,
+                    .cold_end = cold_states[wi].index,
+                    .load_MW = cold_states[wi].rem,
+                });
+                cold_states[wi].rem = 0.0;
+                continue;
+            }
+            break; // all cold satisfied
+        }
 
         const cstate = cold_states[cold_sel_idx.?];
 
@@ -235,17 +255,42 @@ pub fn synthesize(
         }
 
         if (hot_idx == null) {
-            break;
+            // No compatible hot: add heater utility to this cold stream
+            try exchangers.append(allocator, .{
+                .hot_end = null,
+                .cold_end = cstate.index,
+                .load_MW = cstate.rem,
+            });
+            cold_states[cold_sel_idx.?].rem = 0.0;
+            continue;
         }
 
         const hstate = hot_states[hot_idx.?];
 
         const q_limit_opt = maxTransferable(hstate, cstate, dt_min);
-        if (q_limit_opt == null) break;
+        if (q_limit_opt == null) {
+            // Incompatible by temperature: use heater on cold stream
+            try exchangers.append(allocator, .{
+                .hot_end = null,
+                .cold_end = cstate.index,
+                .load_MW = cstate.rem,
+            });
+            cold_states[cold_sel_idx.?].rem = 0.0;
+            continue;
+        }
         var q_hex = q_limit_opt.?;
         q_hex = @min(q_hex, hstate.rem);
         q_hex = @min(q_hex, cstate.rem);
-        if (q_hex <= eps) break;
+        if (q_hex <= eps) {
+            // Degenerate transfer: fall back to utility on cold
+            try exchangers.append(allocator, .{
+                .hot_end = null,
+                .cold_end = cstate.index,
+                .load_MW = cstate.rem,
+            });
+            cold_states[cold_sel_idx.?].rem = 0.0;
+            continue;
+        }
 
         // Record exchanger
         try exchangers.append(allocator, .{
@@ -270,27 +315,39 @@ pub fn synthesize(
     var residual_cold: f32 = 0.0;
     for (cold_states) |c| residual_cold += c.rem;
 
-    // If anything remains unmatched, cover it with one-ended utilities
+    // If anything remains unmatched, cover it with minimal one-ended utilities (one per side)
     if (residual_hot > eps) {
+        var best_idx: ?u16 = null;
+        var best_rem: f32 = 0.0;
         for (hot_states) |h| {
-            if (h.rem > eps) {
-                try exchangers.append(allocator, .{
-                    .hot_end = h.index,
-                    .cold_end = null,
-                    .load_MW = h.rem,
-                });
+            if (h.rem > best_rem) {
+                best_rem = h.rem;
+                best_idx = h.index;
             }
+        }
+        if (best_idx) |idx| {
+            try exchangers.append(allocator, .{
+                .hot_end = idx,
+                .cold_end = null,
+                .load_MW = residual_hot,
+            });
         }
     }
     if (residual_cold > eps) {
+        var best_idx: ?u16 = null;
+        var best_rem: f32 = 0.0;
         for (cold_states) |c| {
-            if (c.rem > eps) {
-                try exchangers.append(allocator, .{
-                    .hot_end = null,
-                    .cold_end = c.index,
-                    .load_MW = c.rem,
-                });
+            if (c.rem > best_rem) {
+                best_rem = c.rem;
+                best_idx = c.index;
             }
+        }
+        if (best_idx) |idx| {
+            try exchangers.append(allocator, .{
+                .hot_end = null,
+                .cold_end = idx,
+                .load_MW = residual_cold,
+            });
         }
     }
 
