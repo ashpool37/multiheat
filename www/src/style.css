@@ -1,8 +1,9 @@
 :root {
+    /* Почему: единый базовый стиль для всех вкладок */
     font-family:
         system-ui,
         -apple-system,
-        Segoe UI,
+        "Segoe UI",
         Roboto,
         Arial,
         sans-serif;
@@ -33,37 +34,53 @@ body {
     padding: 16px;
 }
 
+header {
+    margin-bottom: 12px;
+}
+
 h1 {
     font-size: 22px;
-    margin: 0 0 12px;
-    font-weight: 700;
+    margin: 0;
+    font-weight: 800;
 }
 
-section[aria-label="Действия"] > div {
+h2 {
+    font-size: 16px;
+    margin: 12px 0 8px;
+    font-weight: 800;
+}
+
+section {
+    margin: 0;
+}
+
+.row,
+section[aria-label="Файлы"] > div,
+section[aria-label="Вычисления"] > div {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
     align-items: center;
-    margin: 8px 0 12px;
+    margin: 8px 0 10px;
 }
 
-.row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-    margin: 10px 0;
+/* Почему: простой способ сделать "пустой разрыв" тем же механизмом, что и другие отступы */
+.row:empty {
+    height: 10px;
+    margin: 0;
 }
 
+/* Кнопки */
 button {
     appearance: none;
-    border-radius: 8px;
+    border-radius: 10px;
     border: 1px solid #cbd5e1;
     padding: 10px 12px;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 700;
     font-family: inherit;
     background-color: #ffffff;
+    color: #0f172a;
     cursor: pointer;
     transition:
         background-color 0.15s ease,
@@ -106,9 +123,11 @@ button.secondary:hover {
     color: #ffffff;
 }
 
+/* Статус */
 #statusLabel {
     padding: 10px 12px;
-    border-radius: 10px;
+    margin: 8px 0 12px;
+    border-radius: 12px;
     border: 1px solid #cbd5e1;
     background-color: #ffffff;
     color: #0f172a;
@@ -116,11 +135,59 @@ button.secondary:hover {
     white-space: pre-wrap;
 }
 
-#configText {
+/* Вкладки */
+.tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 10px;
+}
+
+.tab {
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.tab[aria-selected="true"] {
+    border-color: #2563eb;
+    background-color: #2563eb;
+    color: #ffffff;
+}
+
+.tabPanels {
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    padding: 12px;
+}
+
+[role="tabpanel"][hidden] {
+    display: none !important;
+}
+
+/* Описание */
+#descriptionText {
+    margin: 0;
+    white-space: pre-wrap;
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+/* Текстовые поля */
+#tomlText,
+#csvStreamsText,
+#csvSolutionText {
     width: 100%;
-    min-height: 55vh;
     resize: vertical;
-    border-radius: 10px;
+    border-radius: 12px;
     border: 1px solid #cbd5e1;
     padding: 12px;
     font-family:
@@ -132,8 +199,105 @@ button.secondary:hover {
     color: #0f172a;
 }
 
-#configText:focus {
+#tomlText {
+    min-height: 55vh;
+}
+
+#csvStreamsText,
+#csvSolutionText {
+    min-height: 26vh;
+}
+
+#tomlText:focus,
+#csvStreamsText:focus,
+#csvSolutionText:focus {
     outline: none;
     border-color: #60a5fa;
     box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.35);
+}
+
+/* Таблицы */
+.tableWrap {
+    overflow: auto;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+}
+
+.tableWrap table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.tableWrap thead th {
+    background-color: #f1f5f9;
+    font-weight: 800;
+    border-bottom: 1px solid #cbd5e1;
+}
+
+.tableWrap th,
+.tableWrap td {
+    border-bottom: 1px solid #e2e8f0;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+    white-space: nowrap;
+}
+
+.tableWrap tbody tr:nth-child(even) {
+    background-color: #f8fafc;
+}
+
+/* --- Совместимость с динамической разметкой (если используется) --- */
+.mh-gap {
+    height: 10px;
+}
+
+.mh-tabbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0 0 10px;
+}
+
+.mh-tab {
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.mh-tab.active {
+    border-color: #2563eb;
+    background-color: #2563eb;
+    color: #ffffff;
+}
+
+.mh-pre {
+    margin: 0;
+    white-space: pre-wrap;
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.mh-textarea {
+    width: 100%;
+    resize: vertical;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    padding: 12px;
+    font-family:
+        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+        "Liberation Mono", "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1.35;
+    background-color: #ffffff;
+    color: #0f172a;
 }
