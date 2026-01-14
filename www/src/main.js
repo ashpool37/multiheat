@@ -1515,7 +1515,7 @@ const setupClear = () => {
 
   btnClear.addEventListener("click", () => {
     try {
-      const ok = window.confirm("Очистить все данные?");
+      const ok = window.confirm("Сбросить все данные?");
       if (!ok) return;
 
       store.state = defaultState();
@@ -1524,12 +1524,12 @@ const setupClear = () => {
       store.dirty.csvSolution = false;
 
       refreshAllViews(true);
-      setStatus("ok", "Данные очищены.");
+      setStatus("ok", "Данные сброшены.");
     } catch (e) {
-      logError("Очистка данных не удалась", e);
+      logError("Сброс данных не удался", e);
       setStatus(
         "err",
-        "Не удалось очистить данные. Подробности в консоли браузера.",
+        "Не удалось сбросить данные. Подробности в консоли браузера.",
       );
     }
   });

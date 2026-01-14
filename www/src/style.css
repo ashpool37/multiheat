@@ -38,13 +38,15 @@ body {
     margin-bottom: 12px;
     display: flex;
     align-items: baseline;
-    gap: 12px;
+    justify-content: flex-start;
+    gap: 2em;
     flex-wrap: wrap;
 }
 
 .mh-header-gap {
-    flex: 1 1 auto;
-    min-width: 12px;
+    flex: 0 0 6px;
+    width: 6px;
+    min-width: 6px;
 }
 
 h1 {
