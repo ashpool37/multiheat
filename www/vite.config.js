@@ -9,6 +9,7 @@ export default defineConfig(({ command }) => ({
       embedWASM: true,
       topLevelAwait: true,
       ignoreBuildFile: true,
+      multithreaded: false,
     }),
   ],
 }));
