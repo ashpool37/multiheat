@@ -1,241 +1,203 @@
 <!doctype html>
 <html lang="ru">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Multiheat 0.0.1</title>
-    </head>
-    <body>
-        <div id="app">
-            <header>
-                <h1>Multiheat 0.0.1</h1>
-            </header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Multiheat 0.0.1</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="mh-header" aria-label="Заголовок">
+        <h1 class="mh-title">Multiheat 0.0.1</h1>
+        <div class="mh-header-gap"></div>
+        <div id="statusLabel" class="mh-status">
+          ✅ Готов к работе. Откройте файл конфигурации или вставьте её в поле ниже.
+        </div>
+      </header>
 
-            <section aria-label="Файлы">
-                <div class="row">
-                    <button
-                        id="btnOpenToml"
-                        type="button"
-                        aria-label="Открыть TOML"
-                        title="Открыть TOML"
-                    >
-                        📂 TOML
-                    </button>
-                    <button
-                        id="btnOpenCsvStreams"
-                        type="button"
-                        aria-label="Открыть CSV (потоки)"
-                        title="Открыть CSV (потоки)"
-                    >
-                        📂 CSV (потоки)
-                    </button>
-                    <button
-                        id="btnOpenCsvSolution"
-                        type="button"
-                        aria-label="Открыть CSV (решение)"
-                        title="Открыть CSV (решение)"
-                    >
-                        📂 CSV (решение)
-                    </button>
+      <section aria-label="Вычисления">
+        <div class="row">
+          <div class="dropdown">
+            <button
+              id="btnOpenMenu"
+              type="button"
+              aria-label="Открыть"
+              title="Открыть"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="menuOpen"
+            >
+              📂 Открыть
+            </button>
 
-                    <button
-                        id="btnSaveToml"
-                        type="button"
-                        aria-label="Скачать TOML"
-                        title="Скачать TOML"
-                    >
-                        💾 TOML
-                    </button>
-                    <button
-                        id="btnSaveCsvStreams"
-                        type="button"
-                        aria-label="Скачать CSV (потоки)"
-                        title="Скачать CSV (потоки)"
-                    >
-                        💾 CSV (потоки)
-                    </button>
-                    <button
-                        id="btnSaveCsvSolution"
-                        type="button"
-                        aria-label="Скачать CSV (решение)"
-                        title="Скачать CSV (решение)"
-                    >
-                        💾 CSV (решение)
-                    </button>
+            <div id="menuOpen" class="dropdownMenu" role="menu" aria-label="Открыть" hidden>
+              <button id="menuOpenToml" type="button" class="dropdownItem" role="menuitem">
+                TOML
+              </button>
+              <button
+                id="menuOpenCsvStreams"
+                type="button"
+                class="dropdownItem"
+                role="menuitem"
+              >
+                CSV (потоки)
+              </button>
+              <button
+                id="menuOpenCsvSolution"
+                type="button"
+                class="dropdownItem"
+                role="menuitem"
+              >
+                CSV (решение)
+              </button>
+            </div>
+          </div>
 
-                    <input
-                        id="fileToml"
-                        type="file"
-                        accept=".toml,text/toml"
-                        hidden
-                    />
-                    <input
-                        id="fileCsvStreams"
-                        type="file"
-                        accept=".csv,text/csv"
-                        hidden
-                    />
-                    <input
-                        id="fileCsvSolution"
-                        type="file"
-                        accept=".csv,text/csv"
-                        hidden
-                    />
-                </div>
-            </section>
+          <div class="dropdown">
+            <button
+              id="btnSaveMenu"
+              type="button"
+              aria-label="Сохранить"
+              title="Сохранить"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-controls="menuSave"
+            >
+              💾 Сохранить
+            </button>
 
-            <section aria-label="Вычисления">
-                <div class="row">
-                    <button id="btnSolve" type="button">
-                        Синтезировать систему
-                    </button>
-                    <button id="btnVerify" type="button">
-                        Проверить систему
-                    </button>
-                    <button
-                        id="btnClear"
-                        type="button"
-                        aria-label="Очистить данные"
-                        title="Очистить данные"
-                    >
-                        Очистить
-                    </button>
-                </div>
-            </section>
+            <div id="menuSave" class="dropdownMenu" role="menu" aria-label="Сохранить" hidden>
+              <button id="menuSaveToml" type="button" class="dropdownItem" role="menuitem">
+                TOML
+              </button>
+              <button
+                id="menuSaveCsvStreams"
+                type="button"
+                class="dropdownItem"
+                role="menuitem"
+              >
+                CSV (потоки)
+              </button>
+              <button
+                id="menuSaveCsvSolution"
+                type="button"
+                class="dropdownItem"
+                role="menuitem"
+              >
+                CSV (решение)
+              </button>
+            </div>
+          </div>
 
-            <section aria-label="Статус">
-                <div id="statusLabel">
-                    ✅ Готов к работе. Откройте файл конфигурации или вставьте
-                    её в поле ниже.
-                </div>
-            </section>
+          <button id="btnSolve" type="button">Синтезировать систему</button>
+          <button id="btnVerify" type="button">Проверить систему</button>
+          <button id="btnClear" type="button" aria-label="Очистить данные" title="Очистить данные">
+            Очистить
+          </button>
 
-            <div class="row"></div>
+          <input id="fileToml" type="file" accept=".toml,text/toml" hidden />
+          <input id="fileCsvStreams" type="file" accept=".csv,text/csv" hidden />
+          <input id="fileCsvSolution" type="file" accept=".csv,text/csv" hidden />
+        </div>
+      </section>
 
-            <section aria-label="Представления">
-                <div class="tabs" role="tablist" aria-label="Вкладки">
-                    <button
-                        id="tabDescription"
-                        class="tab"
-                        type="button"
-                        role="tab"
-                        aria-selected="true"
-                        aria-controls="panelDescription"
-                    >
-                        Описание
-                    </button>
-                    <button
-                        id="tabTables"
-                        class="tab"
-                        type="button"
-                        role="tab"
-                        aria-selected="false"
-                        aria-controls="panelTables"
-                    >
-                        Таблицы
-                    </button>
-                    <button
-                        id="tabToml"
-                        class="tab"
-                        type="button"
-                        role="tab"
-                        aria-selected="false"
-                        aria-controls="panelToml"
-                    >
-                        TOML
-                    </button>
-                    <button
-                        id="tabCsv"
-                        class="tab"
-                        type="button"
-                        role="tab"
-                        aria-selected="false"
-                        aria-controls="panelCsv"
-                    >
-                        CSV
-                    </button>
-                </div>
+      <div class="row"></div>
 
-                <div class="tabPanels">
-                    <div
-                        id="panelDescription"
-                        role="tabpanel"
-                        aria-labelledby="tabDescription"
-                    >
-                        <div id="descriptionScroll">
-                            <div id="descriptionText"></div>
-                        </div>
-                    </div>
-
-                    <div
-                        id="panelTables"
-                        role="tabpanel"
-                        aria-labelledby="tabTables"
-                        hidden
-                    >
-                        <div id="tablesScroll">
-                            <h2>Потоки</h2>
-                            <div class="tableWrap">
-                                <table id="streamsTable"></table>
-                            </div>
-
-                            <h2>Система теплообмена</h2>
-                            <div class="tableWrap">
-                                <table id="exchangersTable"></table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div
-                        id="panelToml"
-                        role="tabpanel"
-                        aria-labelledby="tabToml"
-                        hidden
-                    >
-                        <textarea
-                            id="tomlText"
-                            rows="24"
-                            spellcheck="false"
-                            placeholder="Вставьте конфигурацию (TOML) сюда..."
-                        ></textarea>
-                    </div>
-
-                    <div
-                        id="panelCsv"
-                        role="tabpanel"
-                        aria-labelledby="tabCsv"
-                        hidden
-                    >
-                        <h2>CSV (потоки)</h2>
-                        <textarea
-                            id="csvStreamsText"
-                            rows="12"
-                            spellcheck="false"
-                            placeholder="Вставьте CSV (потоки) сюда..."
-                        ></textarea>
-
-                        <h2>CSV (решение)</h2>
-                        <textarea
-                            id="csvSolutionText"
-                            rows="12"
-                            spellcheck="false"
-                            placeholder="Вставьте CSV (решение) сюда..."
-                        ></textarea>
-                    </div>
-                </div>
-            </section>
+      <section aria-label="Представления">
+        <div class="tabs" role="tablist" aria-label="Вкладки">
+          <button
+            id="tabDescription"
+            class="tab"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="panelDescription"
+          >
+            Описание
+          </button>
+          <button
+            id="tabTables"
+            class="tab"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panelTables"
+          >
+            Таблица
+          </button>
+          <button
+            id="tabToml"
+            class="tab"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panelToml"
+          >
+            TOML
+          </button>
+          <button
+            id="tabCsv"
+            class="tab"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panelCsv"
+          >
+            CSV
+          </button>
         </div>
 
-        <dialog id="dlgConfirmClear" aria-label="Подтверждение очистки">
-            <form method="dialog">
-                <p>Очистить все данные?</p>
-                <menu>
-                    <button value="cancel">Отмена</button>
-                    <button id="btnConfirmClear" value="ok">ОК</button>
-                </menu>
-            </form>
-        </dialog>
+        <div class="tabPanels">
+          <div id="panelDescription" role="tabpanel" aria-labelledby="tabDescription">
+            <div id="descriptionScroll">
+              <div id="descriptionText"></div>
+            </div>
+          </div>
 
-        <script type="module" src="/src/main.js"></script>
-    </body>
+          <div id="panelTables" role="tabpanel" aria-labelledby="tabTables" hidden>
+            <div id="tablesScroll">
+              <h2>Потоки</h2>
+              <div class="tableWrap">
+                <table id="streamsTable"></table>
+              </div>
+
+              <h2>Система теплообмена</h2>
+              <div class="tableWrap">
+                <table id="exchangersTable"></table>
+              </div>
+            </div>
+          </div>
+
+          <div id="panelToml" role="tabpanel" aria-labelledby="tabToml" hidden>
+            <textarea
+              id="tomlText"
+              rows="24"
+              spellcheck="false"
+              placeholder="Вставьте конфигурацию (TOML) сюда..."
+            ></textarea>
+          </div>
+
+          <div id="panelCsv" role="tabpanel" aria-labelledby="tabCsv" hidden>
+            <h2>CSV (потоки)</h2>
+            <textarea
+              id="csvStreamsText"
+              rows="12"
+              spellcheck="false"
+              placeholder="Вставьте CSV (потоки) сюда..."
+            ></textarea>
+
+            <h2>CSV (решение)</h2>
+            <textarea
+              id="csvSolutionText"
+              rows="12"
+              spellcheck="false"
+              placeholder="Вставьте CSV (решение) сюда..."
+            ></textarea>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
 </html>

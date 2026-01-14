@@ -207,11 +207,6 @@ const validateAndNormalizeState = (state) => {
   const cold = Array.isArray(state.cold) ? state.cold : [];
   const exchanger = Array.isArray(state.exchanger) ? state.exchanger : [];
 
-  if (hot.length === 0)
-    throw new Error("Секция [[hot]] пуста или отсутствует.");
-  if (cold.length === 0)
-    throw new Error("Секция [[cold]] пуста или отсутствует.");
-
   const hotN = hot.map(normalizeStream);
   const coldN = cold.map(normalizeStream);
   const exN = exchanger.map(normalizeExchanger);
@@ -227,9 +222,12 @@ const validateAndNormalizeState = (state) => {
 // --- TOML ---
 
 const parseTomlToState = (text) => {
+  const trimmed = (text ?? "").trim();
+  if (trimmed.length === 0) return defaultState();
+
   let cfg;
   try {
-    cfg = toml.parse(text);
+    cfg = toml.parse(trimmed);
   } catch (e) {
     logError("Ошибка разбора TOML", e);
     throw new Error("Ошибка разбора TOML. Подробности в консоли браузера.");
@@ -544,9 +542,7 @@ const renderDescriptionHtml = (state, host) => {
 
   const exchItems = [];
   const exch = Array.isArray(state.exchanger) ? state.exchanger : [];
-  if (exch.length === 0) {
-    exchItems.push("—");
-  } else {
+  if (exch.length !== 0) {
     for (let i = 0; i < exch.length; i++) {
       const ex = exch[i];
       const id = `E${i + 1}`;
@@ -686,28 +682,25 @@ const renderTables = (state) => {
     "Нагрузка, МВт",
   ];
   const exch = Array.isArray(state.exchanger) ? state.exchanger : [];
-  const exRows =
-    exch.length === 0
-      ? [["—", "—", "—", "—", "—"]]
-      : exch.map((ex, i) => {
-          const hasH = ex.hot !== null && ex.hot !== undefined;
-          const hasC = ex.cold !== null && ex.cold !== undefined;
-          const type =
-            hasH && hasC
-              ? "Ячейка теплообмена"
-              : hasH
-                ? "Холодильник"
-                : hasC
-                  ? "Нагреватель"
-                  : "—";
-          return [
-            `E${i + 1}`,
-            type,
-            hasH ? `H${Number(ex.hot) + 1}` : "—",
-            hasC ? `C${Number(ex.cold) + 1}` : "—",
-            fmtNum(ex.load),
-          ];
-        });
+  const exRows = exch.map((ex, i) => {
+    const hasH = ex.hot !== null && ex.hot !== undefined;
+    const hasC = ex.cold !== null && ex.cold !== undefined;
+    const type =
+      hasH && hasC
+        ? "Ячейка теплообмена"
+        : hasH
+          ? "Холодильник"
+          : hasC
+            ? "Нагреватель"
+            : "—";
+    return [
+      `E${i + 1}`,
+      type,
+      hasH ? `H${Number(ex.hot) + 1}` : "—",
+      hasC ? `C${Number(ex.cold) + 1}` : "—",
+      fmtNum(ex.load),
+    ];
+  });
 
   renderTable(ui.tables.exchangersTable, exHeaders, exRows);
 };
@@ -887,14 +880,25 @@ const ui = {
   status: $("#statusLabel"),
 
   buttons: {
-    uploadToml: $("#btnOpenToml"),
-    uploadCsvStreams: $("#btnOpenCsvStreams"),
-    uploadCsvSolution: $("#btnOpenCsvSolution"),
-    downloadToml: $("#btnSaveToml"),
-    downloadCsvStreams: $("#btnSaveCsvStreams"),
-    downloadCsvSolution: $("#btnSaveCsvSolution"),
+    openMenu: $("#btnOpenMenu"),
+    saveMenu: $("#btnSaveMenu"),
+
+    openToml: $("#menuOpenToml"),
+    openCsvStreams: $("#menuOpenCsvStreams"),
+    openCsvSolution: $("#menuOpenCsvSolution"),
+
+    saveToml: $("#menuSaveToml"),
+    saveCsvStreams: $("#menuSaveCsvStreams"),
+    saveCsvSolution: $("#menuSaveCsvSolution"),
+
     solve: $("#btnSolve"),
     verify: $("#btnVerify"),
+    clear: $("#btnClear"),
+  },
+
+  menus: {
+    open: $("#menuOpen"),
+    save: $("#menuSave"),
   },
 
   inputs: {
@@ -982,6 +986,20 @@ const syncStateFromCsvEditors = () => {
   const streamsText = ui.csv.streamsTextarea.value ?? "";
   const solText = ui.csv.solutionTextarea.value ?? "";
 
+  if (streamsText.trim().length === 0) {
+    if (solText.trim().length === 0) {
+      store.state = defaultState();
+      store.dirty.toml = false;
+      store.dirty.csvStreams = false;
+      store.dirty.csvSolution = false;
+      refreshAllViews(true);
+      return;
+    }
+    throw new Error(
+      "CSV (потоки) пустой: невозможно применить CSV (решение) без потоков.",
+    );
+  }
+
   const partial = parseCsvStreamsToStatePartial(streamsText);
   const base = {
     multiheat: { version: "0.0.1", temp_unit: "K" },
@@ -1026,7 +1044,7 @@ const switchTab = (nextTab) => {
     // Почему: проверяем только перед "чтением" (Описание/Таблицы), а не при переходах между редактируемыми вкладками
     if (goingToNonEditable) {
       syncFromActiveEditorIfNeeded();
-      validateAndNormalizeState(store.state);
+      // Почему: пустая система допустима для просмотра "Описание/Таблица"
     }
 
     setActiveTab(nextTab);
@@ -1123,11 +1141,11 @@ const hookEvents = () => {
   ui.tabs.toml.addEventListener("click", () => switchTab(Tab.toml));
   ui.tabs.csv.addEventListener("click", () => switchTab(Tab.csv));
 
-  ui.buttons.uploadToml.addEventListener("click", () => ui.inputs.toml.click());
-  ui.buttons.uploadCsvStreams.addEventListener("click", () =>
+  ui.buttons.openToml.addEventListener("click", () => ui.inputs.toml.click());
+  ui.buttons.openCsvStreams.addEventListener("click", () =>
     ui.inputs.csvStreams.click(),
   );
-  ui.buttons.uploadCsvSolution.addEventListener("click", () =>
+  ui.buttons.openCsvSolution.addEventListener("click", () =>
     ui.inputs.csvSolution.click(),
   );
 
@@ -1152,7 +1170,7 @@ const hookEvents = () => {
     await onUploadCsvSolution(file);
   });
 
-  ui.buttons.downloadToml.addEventListener("click", async () => {
+  ui.buttons.saveToml.addEventListener("click", async () => {
     try {
       syncFromActiveEditorIfNeeded();
       const text = emitToml(store.state);
@@ -1171,7 +1189,7 @@ const hookEvents = () => {
     }
   });
 
-  ui.buttons.downloadCsvStreams.addEventListener("click", async () => {
+  ui.buttons.saveCsvStreams.addEventListener("click", async () => {
     try {
       syncFromActiveEditorIfNeeded();
       const text = emitCsvStreams(store.state);
@@ -1190,7 +1208,7 @@ const hookEvents = () => {
     }
   });
 
-  ui.buttons.downloadCsvSolution.addEventListener("click", async () => {
+  ui.buttons.saveCsvSolution.addEventListener("click", async () => {
     try {
       syncFromActiveEditorIfNeeded();
       const text = emitCsvSolution(store.state);
@@ -1227,6 +1245,14 @@ const solveCurrent = () => {
       setStatus(
         "err",
         "Не удалось синтезировать систему: входные данные некорректны. Подробности в консоли браузера.",
+      );
+      return;
+    }
+
+    if (store.state.hot.length === 0 || store.state.cold.length === 0) {
+      setStatus(
+        "err",
+        "Невозможно синтезировать систему: добавьте хотя бы один горячий и один холодный поток.",
       );
       return;
     }
@@ -1296,6 +1322,14 @@ const verifyCurrent = () => {
       setStatus(
         "err",
         "Не удалось проверить систему: входные данные некорректны. Подробности в консоли браузера.",
+      );
+      return;
+    }
+
+    if (store.state.hot.length === 0 || store.state.cold.length === 0) {
+      setStatus(
+        "err",
+        "Невозможно проверить систему: добавьте хотя бы один горячий и один холодный поток.",
       );
       return;
     }
@@ -1372,6 +1406,71 @@ const init = async () => {
 
 await init();
 
+(() => {
+  const openBtn = ui.buttons.openMenu;
+  const saveBtn = ui.buttons.saveMenu;
+  const openMenu = ui.menus.open;
+  const saveMenu = ui.menus.save;
+
+  const setExpanded = (btn, expanded) => {
+    btn.setAttribute("aria-expanded", expanded ? "true" : "false");
+  };
+
+  const closeMenu = (btn, menu) => {
+    menu.hidden = true;
+    setExpanded(btn, false);
+  };
+
+  const toggleMenu = (btn, menu) => {
+    const nextHidden = !menu.hidden;
+    menu.hidden = nextHidden;
+    setExpanded(btn, !nextHidden);
+  };
+
+  openBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeMenu(saveBtn, saveMenu);
+    toggleMenu(openBtn, openMenu);
+  });
+
+  saveBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeMenu(openBtn, openMenu);
+    toggleMenu(saveBtn, saveMenu);
+  });
+
+  // Почему: кликом вне меню закрываем выпадашки
+  document.addEventListener("click", (e) => {
+    const t = e.target;
+    if (!openMenu.hidden && !openMenu.contains(t) && !openBtn.contains(t))
+      closeMenu(openBtn, openMenu);
+    if (!saveMenu.hidden && !saveMenu.contains(t) && !saveBtn.contains(t))
+      closeMenu(saveBtn, saveMenu);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (!openMenu.hidden) closeMenu(openBtn, openMenu);
+    if (!saveMenu.hidden) closeMenu(saveBtn, saveMenu);
+  });
+
+  const closeBoth = () => {
+    closeMenu(openBtn, openMenu);
+    closeMenu(saveBtn, saveMenu);
+  };
+
+  for (const el of [
+    ui.buttons.openToml,
+    ui.buttons.openCsvStreams,
+    ui.buttons.openCsvSolution,
+    ui.buttons.saveToml,
+    ui.buttons.saveCsvStreams,
+    ui.buttons.saveCsvSolution,
+  ]) {
+    el.addEventListener("click", () => closeBoth());
+  }
+})();
+
 const hasAnyUserData = () => {
   const s = store.state;
   const hotLen = Array.isArray(s?.hot) ? s.hot.length : 0;
@@ -1414,22 +1513,9 @@ const setupClear = () => {
   const btnClear = document.querySelector("#btnClear");
   if (!btnClear) return;
 
-  const dlg = document.querySelector("#dlgConfirmClear");
-
-  const confirmClear = () =>
-    new Promise((resolve) => {
-      if (dlg && typeof dlg.showModal === "function") {
-        const onClose = () => resolve(dlg.returnValue === "ok");
-        dlg.addEventListener("close", onClose, { once: true });
-        dlg.showModal();
-        return;
-      }
-      resolve(window.confirm("Очистить все данные?"));
-    });
-
-  btnClear.addEventListener("click", async () => {
+  btnClear.addEventListener("click", () => {
     try {
-      const ok = await confirmClear();
+      const ok = window.confirm("Очистить все данные?");
       if (!ok) return;
 
       store.state = defaultState();
