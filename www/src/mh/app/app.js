@@ -4,7 +4,17 @@ import { createStatus } from "./status.js";
 import { createViewsCoordinator } from "./views.js";
 import { createTabsController, Tab } from "./tabs.js";
 
-import { logError, isAbortError } from "../util/errors.js";
+import {
+  logError,
+  isAbortError,
+  logDebug,
+  logInfo,
+  logWarn,
+  summarizeModuleExports,
+  isDebugEnabled,
+} from "../util/errors.js";
+
+import * as multiheatModule from "../../../zig/multiheat_entry.zig";
 
 import { defaultState, validateAndNormalizeState } from "../model/state.js";
 
@@ -576,7 +586,16 @@ export const startApp = async () => {
   );
 
   // --- Интеграция Zig/WASM ---
+  // Почему: используем статический импорт, чтобы избежать зависаний/TDZ в production-сборке
+  // из-за обёрток динамического import() и modulepreload.
   let multiheat = null;
+
+  logDebug("Старт Zig/WASM инициализации (статический импорт)", {
+    href: window.location?.href,
+    baseURI: document.baseURI,
+    importMetaUrl: import.meta.url,
+    debug: isDebugEnabled(),
+  });
 
   const solveCurrent = () => {
     try {
@@ -700,17 +719,67 @@ export const startApp = async () => {
   ui.buttons.verify.addEventListener("click", verifyCurrent);
 
   try {
-    // Почему: включаем интерфейс только после инициализации WASM
-    multiheat = await import("../../../zig/multiheat_entry.zig");
+    // Почему: включаем вычисления только после проверки экспортируемого API.
+    // Модуль Zig/WASM импортирован статически на уровне модуля (`import * as multiheatModule ...`),
+    // поэтому здесь не используем динамический import() и связанные с ним обёртки.
+    logInfo(
+      "Подключение модуля вычислений (Zig/WASM) (статический импорт)...",
+      {
+        href: window.location?.href,
+        baseURI: document.baseURI,
+      },
+    );
+
+    multiheat = multiheatModule;
+
+    logInfo("Модуль вычислений доступен", {
+      exports: summarizeModuleExports(multiheat),
+    });
+
+    const checks = {
+      solve: typeof multiheat?.solve,
+      verifySolution: typeof multiheat?.verifySolution,
+      HeatSystem: typeof multiheat?.HeatSystem,
+      HeatStream: typeof multiheat?.HeatStream,
+      HeatExchanger: typeof multiheat?.HeatExchanger,
+    };
+
+    const def = multiheat && "default" in multiheat ? multiheat.default : null;
+    const defaultChecks = def
+      ? {
+          solve: typeof def?.solve,
+          verifySolution: typeof def?.verifySolution,
+          HeatSystem: typeof def?.HeatSystem,
+          HeatStream: typeof def?.HeatStream,
+          HeatExchanger: typeof def?.HeatExchanger,
+        }
+      : null;
+
+    logDebug("Проверка экспортируемого API Zig/WASM", {
+      checks,
+      defaultChecks,
+    });
 
     const ok =
-      typeof multiheat.solve === "function" &&
-      typeof multiheat.verifySolution === "function" &&
-      typeof multiheat.HeatSystem === "function" &&
-      typeof multiheat.HeatStream === "function" &&
-      typeof multiheat.HeatExchanger === "function";
+      checks.solve === "function" &&
+      checks.verifySolution === "function" &&
+      checks.HeatSystem === "function" &&
+      checks.HeatStream === "function" &&
+      checks.HeatExchanger === "function";
 
     if (!ok) {
+      logWarn("Zig/WASM импортирован, но API не совпадает с ожидаемым", {
+        checks,
+        defaultChecks,
+        exports: summarizeModuleExports(multiheat),
+        hint:
+          defaultChecks &&
+          defaultChecks.solve === "function" &&
+          defaultChecks.verifySolution === "function"
+            ? "Похоже, нужные экспорты находятся под `default`. Это часто проявляется только в production-сборке."
+            : null,
+      });
+
       setSolverEnabled(ui, false);
       setStatus(
         "err",
@@ -718,6 +787,8 @@ export const startApp = async () => {
       );
       return { ui, store, multiheat: null };
     }
+
+    logInfo("Zig/WASM готов: включаем вычисления", { checks });
 
     setUiEnabled(ui, true);
     setSolverEnabled(ui, true);
@@ -729,7 +800,13 @@ export const startApp = async () => {
 
     return { ui, store, multiheat };
   } catch (e) {
-    logError("Не удалось загрузить модуль вычислений", e);
+    logError("Не удалось загрузить модуль вычислений", e, {
+      href: window.location?.href,
+      baseURI: document.baseURI,
+      importMetaUrl: import.meta.url,
+      debug: isDebugEnabled(),
+      mode: "static-import",
+    });
     setSolverEnabled(ui, false);
     setStatus(
       "err",
