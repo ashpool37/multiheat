@@ -34,12 +34,22 @@ body {
     padding: 16px;
 }
 
+#controlPanel {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #f8fafc;
+    padding: 16px 16px 10px;
+    margin: -16px -16px 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
 .mh-header {
     margin-bottom: 12px;
     display: flex;
     align-items: baseline;
     justify-content: flex-start;
-    gap: 2em;
+    gap: 20px;
     flex-wrap: wrap;
 }
 
@@ -180,9 +190,9 @@ button.secondary:hover {
 /* Почему: отдельная прокрутка для вкладок "Описание" и "Таблицы" */
 #descriptionScroll,
 #tablesScroll {
-    max-height: 55vh;
-    overflow: auto;
-    padding-right: 6px;
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
 }
 
 [role="tabpanel"][hidden] {
@@ -232,12 +242,14 @@ button.secondary:hover {
 }
 
 #tomlText {
-    min-height: 55vh;
+    min-height: 40vh;
+    max-height: 70vh;
 }
 
 #csvStreamsText,
 #csvSolutionText {
-    min-height: 26vh;
+    min-height: 18vh;
+    max-height: 32vh;
 }
 
 #tomlText:focus,
@@ -250,7 +262,8 @@ button.secondary:hover {
 
 /* Таблицы */
 .tableWrap {
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: visible;
     border-radius: 12px;
     border: 1px solid #e2e8f0;
     background: #ffffff;

@@ -7,202 +7,204 @@
     </head>
     <body>
         <div id="app">
-            <header class="mh-header" aria-label="Заголовок">
-                <h1 class="mh-title">Multiheat 0.0.1</h1>
+            <div id="controlPanel" aria-label="Панель управления">
+                <header class="mh-header" aria-label="Заголовок">
+                    <h1 class="mh-title">Multiheat 0.0.1</h1>
 
-                <div id="statusLabel" class="mh-status">
-                    ✅ Готов к работе. Откройте файл конфигурации или вставьте
-                    её в поле ниже.
-                </div>
-            </header>
+                    <div id="statusLabel" class="mh-status">
+                        ✅ Готов к работе. Откройте файл конфигурации или
+                        вставьте её в поле ниже.
+                    </div>
+                </header>
 
-            <section aria-label="Вычисления">
-                <div class="row">
-                    <div class="dropdown">
+                <section aria-label="Вычисления">
+                    <div class="row">
+                        <div class="dropdown">
+                            <button
+                                id="btnOpenMenu"
+                                type="button"
+                                aria-label="Открыть"
+                                title="Открыть"
+                                aria-haspopup="menu"
+                                aria-expanded="false"
+                                aria-controls="menuOpen"
+                            >
+                                📂 Открыть
+                            </button>
+
+                            <div
+                                id="menuOpen"
+                                class="dropdownMenu"
+                                role="menu"
+                                aria-label="Открыть"
+                                hidden
+                            >
+                                <button
+                                    id="menuOpenToml"
+                                    type="button"
+                                    class="dropdownItem"
+                                    role="menuitem"
+                                >
+                                    TOML
+                                </button>
+                                <button
+                                    id="menuOpenCsvStreams"
+                                    type="button"
+                                    class="dropdownItem"
+                                    role="menuitem"
+                                >
+                                    CSV (потоки)
+                                </button>
+                                <button
+                                    id="menuOpenCsvSolution"
+                                    type="button"
+                                    class="dropdownItem"
+                                    role="menuitem"
+                                >
+                                    CSV (решение)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="dropdown">
+                            <button
+                                id="btnSaveMenu"
+                                type="button"
+                                aria-label="Сохранить"
+                                title="Сохранить"
+                                aria-haspopup="menu"
+                                aria-expanded="false"
+                                aria-controls="menuSave"
+                            >
+                                💾 Сохранить
+                            </button>
+
+                            <div
+                                id="menuSave"
+                                class="dropdownMenu"
+                                role="menu"
+                                aria-label="Сохранить"
+                                hidden
+                            >
+                                <button
+                                    id="menuSaveToml"
+                                    type="button"
+                                    class="dropdownItem"
+                                    role="menuitem"
+                                >
+                                    TOML
+                                </button>
+                                <button
+                                    id="menuSaveCsvStreams"
+                                    type="button"
+                                    class="dropdownItem"
+                                    role="menuitem"
+                                >
+                                    CSV (потоки)
+                                </button>
+                                <button
+                                    id="menuSaveCsvSolution"
+                                    type="button"
+                                    class="dropdownItem"
+                                    role="menuitem"
+                                >
+                                    CSV (решение)
+                                </button>
+                            </div>
+                        </div>
+
+                        <button id="btnSolve" type="button">
+                            📊 Синтезировать систему
+                        </button>
+                        <button id="btnVerify" type="button">
+                            🔍 Проверить систему
+                        </button>
                         <button
-                            id="btnOpenMenu"
+                            id="btnClear"
                             type="button"
-                            aria-label="Открыть"
-                            title="Открыть"
-                            aria-haspopup="menu"
-                            aria-expanded="false"
-                            aria-controls="menuOpen"
+                            aria-label="Сбросить данные"
+                            title="Сбросить данные"
                         >
-                            📂 Открыть
+                            🗑️ Сбросить данные
                         </button>
 
-                        <div
-                            id="menuOpen"
-                            class="dropdownMenu"
-                            role="menu"
-                            aria-label="Открыть"
+                        <input
+                            id="fileToml"
+                            type="file"
+                            accept=".toml,text/toml"
                             hidden
-                        >
-                            <button
-                                id="menuOpenToml"
-                                type="button"
-                                class="dropdownItem"
-                                role="menuitem"
-                            >
-                                TOML
-                            </button>
-                            <button
-                                id="menuOpenCsvStreams"
-                                type="button"
-                                class="dropdownItem"
-                                role="menuitem"
-                            >
-                                CSV (потоки)
-                            </button>
-                            <button
-                                id="menuOpenCsvSolution"
-                                type="button"
-                                class="dropdownItem"
-                                role="menuitem"
-                            >
-                                CSV (решение)
-                            </button>
-                        </div>
+                        />
+                        <input
+                            id="fileCsvStreams"
+                            type="file"
+                            accept=".csv,text/csv"
+                            hidden
+                        />
+                        <input
+                            id="fileCsvSolution"
+                            type="file"
+                            accept=".csv,text/csv"
+                            hidden
+                        />
                     </div>
+                </section>
 
-                    <div class="dropdown">
+                <div class="row"></div>
+
+                <section aria-label="Вкладки">
+                    <div class="tabs" role="tablist" aria-label="Вкладки">
                         <button
-                            id="btnSaveMenu"
+                            id="tabDescription"
+                            class="tab"
                             type="button"
-                            aria-label="Сохранить"
-                            title="Сохранить"
-                            aria-haspopup="menu"
-                            aria-expanded="false"
-                            aria-controls="menuSave"
+                            role="tab"
+                            aria-selected="true"
+                            aria-controls="panelDescription"
                         >
-                            💾 Сохранить
+                            Описание
                         </button>
-
-                        <div
-                            id="menuSave"
-                            class="dropdownMenu"
-                            role="menu"
-                            aria-label="Сохранить"
-                            hidden
+                        <button
+                            id="tabTables"
+                            class="tab"
+                            type="button"
+                            role="tab"
+                            aria-selected="false"
+                            aria-controls="panelTables"
                         >
-                            <button
-                                id="menuSaveToml"
-                                type="button"
-                                class="dropdownItem"
-                                role="menuitem"
-                            >
-                                TOML
-                            </button>
-                            <button
-                                id="menuSaveCsvStreams"
-                                type="button"
-                                class="dropdownItem"
-                                role="menuitem"
-                            >
-                                CSV (потоки)
-                            </button>
-                            <button
-                                id="menuSaveCsvSolution"
-                                type="button"
-                                class="dropdownItem"
-                                role="menuitem"
-                            >
-                                CSV (решение)
-                            </button>
-                        </div>
+                            Таблица
+                        </button>
+                        <button
+                            id="tabToml"
+                            class="tab"
+                            type="button"
+                            role="tab"
+                            aria-selected="false"
+                            aria-controls="panelToml"
+                        >
+                            TOML
+                        </button>
+                        <button
+                            id="tabCsv"
+                            class="tab"
+                            type="button"
+                            role="tab"
+                            aria-selected="false"
+                            aria-controls="panelCsv"
+                        >
+                            CSV
+                        </button>
                     </div>
-
-                    <button id="btnSolve" type="button">
-                        📊 Синтезировать систему
-                    </button>
-                    <button id="btnVerify" type="button">
-                        🔍 Проверить систему
-                    </button>
-                    <button
-                        id="btnClear"
-                        type="button"
-                        aria-label="Сбросить данные"
-                        title="Сбросить данные"
-                    >
-                        🗑️ Сбросить данные
-                    </button>
-
-                    <input
-                        id="fileToml"
-                        type="file"
-                        accept=".toml,text/toml"
-                        hidden
-                    />
-                    <input
-                        id="fileCsvStreams"
-                        type="file"
-                        accept=".csv,text/csv"
-                        hidden
-                    />
-                    <input
-                        id="fileCsvSolution"
-                        type="file"
-                        accept=".csv,text/csv"
-                        hidden
-                    />
-                </div>
-            </section>
-
-            <div class="row"></div>
+                </section>
+            </div>
 
             <section aria-label="Представления">
-                <div class="tabs" role="tablist" aria-label="Вкладки">
-                    <button
-                        id="tabDescription"
-                        class="tab"
-                        type="button"
-                        role="tab"
-                        aria-selected="true"
-                        aria-controls="panelDescription"
-                    >
-                        Описание
-                    </button>
-                    <button
-                        id="tabTables"
-                        class="tab"
-                        type="button"
-                        role="tab"
-                        aria-selected="false"
-                        aria-controls="panelTables"
-                    >
-                        Таблица
-                    </button>
-                    <button
-                        id="tabToml"
-                        class="tab"
-                        type="button"
-                        role="tab"
-                        aria-selected="false"
-                        aria-controls="panelToml"
-                    >
-                        TOML
-                    </button>
-                    <button
-                        id="tabCsv"
-                        class="tab"
-                        type="button"
-                        role="tab"
-                        aria-selected="false"
-                        aria-controls="panelCsv"
-                    >
-                        CSV
-                    </button>
-                </div>
-
                 <div class="tabPanels">
                     <div
                         id="panelDescription"
                         role="tabpanel"
                         aria-labelledby="tabDescription"
                     >
-                        <div id="descriptionScroll">
-                            <div id="descriptionText"></div>
-                        </div>
+                        <div id="descriptionText"></div>
                     </div>
 
                     <div
@@ -211,16 +213,14 @@
                         aria-labelledby="tabTables"
                         hidden
                     >
-                        <div id="tablesScroll">
-                            <h2>Потоки</h2>
-                            <div class="tableWrap">
-                                <table id="streamsTable"></table>
-                            </div>
+                        <h2>Потоки</h2>
+                        <div class="tableWrap">
+                            <table id="streamsTable"></table>
+                        </div>
 
-                            <h2>Система теплообмена</h2>
-                            <div class="tableWrap">
-                                <table id="exchangersTable"></table>
-                            </div>
+                        <h2>Система теплообмена</h2>
+                        <div class="tableWrap">
+                            <table id="exchangersTable"></table>
                         </div>
                     </div>
 
