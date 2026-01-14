@@ -487,15 +487,29 @@ const parseCsvSolutionToExchangers = (text, hotLen, coldLen) => {
 
 // --- Views (description/tables) ---
 
-const renderDescription = (state) => {
-  const lines = [];
+const renderDescriptionHtml = (state, host) => {
+  host.innerHTML = "";
 
-  lines.push("Потоки, отдающие тепло");
+  const addSection = (title, items) => {
+    const h = document.createElement("h3");
+    h.textContent = title;
+    host.appendChild(h);
+
+    const ul = document.createElement("ul");
+    for (const text of items) {
+      const li = document.createElement("li");
+      li.textContent = text;
+      ul.appendChild(li);
+    }
+    host.appendChild(ul);
+  };
+
+  const hotItems = [];
   for (let i = 0; i < state.hot.length; i++) {
     const s = state.hot[i];
     const id = `H${i + 1}`;
     if (s.out === undefined) {
-      lines.push(
+      hotItems.push(
         `${id}. Изотермический. Температура: ${fmtNum(s.in)} К. Нагрузка: ${fmtNum(s.load)} МВт.`,
       );
     } else {
@@ -503,19 +517,18 @@ const renderDescription = (state) => {
         s.rate !== undefined
           ? Number(s.rate)
           : Number(s.load) / Math.abs(Number(s.out) - Number(s.in));
-      lines.push(
+      hotItems.push(
         `${id}. Охлаждающийся. Температура: с ${fmtNum(s.in)} К до ${fmtNum(s.out)} К. Потоковая теплоёмкость: ${fmtNum(rate)} МВт/К.`,
       );
     }
   }
 
-  lines.push("");
-  lines.push("Потоки, получающие тепло");
+  const coldItems = [];
   for (let i = 0; i < state.cold.length; i++) {
     const s = state.cold[i];
     const id = `C${i + 1}`;
     if (s.out === undefined) {
-      lines.push(
+      coldItems.push(
         `${id}. Изотермический. Температура: ${fmtNum(s.in)} К. Нагрузка: ${fmtNum(s.load)} МВт.`,
       );
     } else {
@@ -523,45 +536,44 @@ const renderDescription = (state) => {
         s.rate !== undefined
           ? Number(s.rate)
           : Number(s.load) / Math.abs(Number(s.out) - Number(s.in));
-      lines.push(
+      coldItems.push(
         `${id}. Нагревающийся. Температура: с ${fmtNum(s.in)} К до ${fmtNum(s.out)} К. Потоковая теплоёмкость: ${fmtNum(rate)} МВт/К.`,
       );
     }
   }
 
-  lines.push("");
-  lines.push("Система теплообмена");
-
+  const exchItems = [];
   const exch = Array.isArray(state.exchanger) ? state.exchanger : [];
   if (exch.length === 0) {
-    lines.push("—");
-    return lines.join("\n");
-  }
+    exchItems.push("—");
+  } else {
+    for (let i = 0; i < exch.length; i++) {
+      const ex = exch[i];
+      const id = `E${i + 1}`;
+      const hasH = ex.hot !== null && ex.hot !== undefined;
+      const hasC = ex.cold !== null && ex.cold !== undefined;
 
-  for (let i = 0; i < exch.length; i++) {
-    const ex = exch[i];
-    const id = `E${i + 1}`;
-    const hasH = ex.hot !== null && ex.hot !== undefined;
-    const hasC = ex.cold !== null && ex.cold !== undefined;
-
-    if (hasH && hasC) {
-      lines.push(
-        `${id}. Ячейка теплообмена. Потоки: H${Number(ex.hot) + 1}, C${Number(ex.cold) + 1}. Нагрузка: ${fmtNum(ex.load)} МВт.`,
-      );
-    } else if (hasH && !hasC) {
-      lines.push(
-        `${id}. Холодильник. Поток: H${Number(ex.hot) + 1}. Нагрузка: ${fmtNum(ex.load)} МВт.`,
-      );
-    } else if (!hasH && hasC) {
-      lines.push(
-        `${id}. Нагреватель. Поток: C${Number(ex.cold) + 1}. Нагрузка: ${fmtNum(ex.load)} МВт.`,
-      );
-    } else {
-      lines.push(`${id}. Некорректная запись теплообменника.`);
+      if (hasH && hasC) {
+        exchItems.push(
+          `${id}. Ячейка теплообмена. Потоки: H${Number(ex.hot) + 1}, C${Number(ex.cold) + 1}. Нагрузка: ${fmtNum(ex.load)} МВт.`,
+        );
+      } else if (hasH && !hasC) {
+        exchItems.push(
+          `${id}. Холодильник. Поток: H${Number(ex.hot) + 1}. Нагрузка: ${fmtNum(ex.load)} МВт.`,
+        );
+      } else if (!hasH && hasC) {
+        exchItems.push(
+          `${id}. Нагреватель. Поток: C${Number(ex.cold) + 1}. Нагрузка: ${fmtNum(ex.load)} МВт.`,
+        );
+      } else {
+        exchItems.push(`${id}. Некорректная запись теплообменника.`);
+      }
     }
   }
 
-  return lines.join("\n");
+  addSection("Потоки, отдающие тепло", hotItems);
+  addSection("Потоки, получающие тепло", coldItems);
+  addSection("Система теплообмена", exchItems);
 };
 
 const renderTable = (tableEl, headers, rows) => {
@@ -701,7 +713,7 @@ const renderTables = (state) => {
 };
 
 const updateNonEditableViews = () => {
-  ui.description.pre.textContent = renderDescription(store.state);
+  renderDescriptionHtml(store.state, ui.description.pre);
   renderTables(store.state);
 };
 
@@ -1014,6 +1026,7 @@ const switchTab = (nextTab) => {
     // Почему: проверяем только перед "чтением" (Описание/Таблицы), а не при переходах между редактируемыми вкладками
     if (goingToNonEditable) {
       syncFromActiveEditorIfNeeded();
+      validateAndNormalizeState(store.state);
     }
 
     setActiveTab(nextTab);
@@ -1025,8 +1038,6 @@ const switchTab = (nextTab) => {
     if (nextTab === Tab.toml || nextTab === Tab.csv) {
       updateEditorsFromState(false);
     }
-
-    setStatus("ok", "Готово.");
   } catch (e) {
     logError("Ошибка при переключении вкладки", e);
     setStatus(
@@ -1209,6 +1220,17 @@ const solveCurrent = () => {
 
     syncFromActiveEditorIfNeeded();
 
+    try {
+      store.state = validateAndNormalizeState(store.state);
+    } catch (e) {
+      logError("Проверка входных данных перед синтезом не пройдена", e);
+      setStatus(
+        "err",
+        "Не удалось синтезировать систему: входные данные некорректны. Подробности в консоли браузера.",
+      );
+      return;
+    }
+
     const system = buildZigSystem(multiheat, store.state, false);
 
     try {
@@ -1234,7 +1256,6 @@ const solveCurrent = () => {
     store.dirty.csvSolution = false;
 
     refreshAllViews(true);
-    setActiveTab(Tab.toml);
 
     try {
       const verifySystem = buildZigSystem(multiheat, store.state, true);
@@ -1264,6 +1285,20 @@ const verifyCurrent = () => {
     if (!multiheat) throw new Error("Модуль вычислений не загружен.");
 
     syncFromActiveEditorIfNeeded();
+
+    try {
+      store.state = validateAndNormalizeState(store.state);
+    } catch (e) {
+      logError(
+        "Проверка входных данных перед проверкой решения не пройдена",
+        e,
+      );
+      setStatus(
+        "err",
+        "Не удалось проверить систему: входные данные некорректны. Подробности в консоли браузера.",
+      );
+      return;
+    }
 
     const system = buildZigSystem(multiheat, store.state, true);
 
@@ -1336,3 +1371,82 @@ const init = async () => {
 };
 
 await init();
+
+const hasAnyUserData = () => {
+  const s = store.state;
+  const hotLen = Array.isArray(s?.hot) ? s.hot.length : 0;
+  const coldLen = Array.isArray(s?.cold) ? s.cold.length : 0;
+  const exLen = Array.isArray(s?.exchanger) ? s.exchanger.length : 0;
+
+  if (hotLen > 0 || coldLen > 0 || exLen > 0) return true;
+
+  const empty = defaultState();
+
+  if (store.dirty.toml) {
+    const cur = (ui.toml.textarea.value ?? "").trim();
+    const def = emitToml(empty).trim();
+    if (cur !== def) return true;
+  }
+
+  if (store.dirty.csvStreams) {
+    const cur = (ui.csv.streamsTextarea.value ?? "").trim();
+    const def = emitCsvStreams(empty).trim();
+    if (cur !== def) return true;
+  }
+
+  if (store.dirty.csvSolution) {
+    const cur = (ui.csv.solutionTextarea.value ?? "").trim();
+    const def = emitCsvSolution(empty).trim();
+    if (cur !== def) return true;
+  }
+
+  return false;
+};
+
+window.addEventListener("beforeunload", (e) => {
+  if (!hasAnyUserData()) return;
+  e.preventDefault();
+  e.returnValue = "";
+  return "";
+});
+
+const setupClear = () => {
+  const btnClear = document.querySelector("#btnClear");
+  if (!btnClear) return;
+
+  const dlg = document.querySelector("#dlgConfirmClear");
+
+  const confirmClear = () =>
+    new Promise((resolve) => {
+      if (dlg && typeof dlg.showModal === "function") {
+        const onClose = () => resolve(dlg.returnValue === "ok");
+        dlg.addEventListener("close", onClose, { once: true });
+        dlg.showModal();
+        return;
+      }
+      resolve(window.confirm("Очистить все данные?"));
+    });
+
+  btnClear.addEventListener("click", async () => {
+    try {
+      const ok = await confirmClear();
+      if (!ok) return;
+
+      store.state = defaultState();
+      store.dirty.toml = false;
+      store.dirty.csvStreams = false;
+      store.dirty.csvSolution = false;
+
+      refreshAllViews(true);
+      setStatus("ok", "Данные очищены.");
+    } catch (e) {
+      logError("Очистка данных не удалась", e);
+      setStatus(
+        "err",
+        "Не удалось очистить данные. Подробности в консоли браузера.",
+      );
+    }
+  });
+};
+
+setupClear();

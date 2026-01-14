@@ -166,6 +166,14 @@ button.secondary:hover {
     padding: 12px;
 }
 
+/* Почему: отдельная прокрутка для вкладок "Описание" и "Таблицы" */
+#descriptionScroll,
+#tablesScroll {
+    max-height: 55vh;
+    overflow: auto;
+    padding-right: 6px;
+}
+
 [role="tabpanel"][hidden] {
     display: none !important;
 }
@@ -173,12 +181,25 @@ button.secondary:hover {
 /* Описание */
 #descriptionText {
     margin: 0;
-    white-space: pre-wrap;
-    font-family:
-        ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-        "Liberation Mono", "Courier New", monospace;
-    font-size: 13px;
-    line-height: 1.35;
+    white-space: normal;
+    font-size: 14px;
+    line-height: 1.45;
+}
+
+/* Почему: читаемость списка без "моноширинного" вида */
+#descriptionText h3 {
+    margin: 12px 0 8px;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+#descriptionText ul {
+    margin: 0 0 10px 18px;
+    padding: 0;
+}
+
+#descriptionText li {
+    margin: 6px 0;
 }
 
 /* Текстовые поля */

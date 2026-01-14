@@ -92,6 +92,14 @@
                     <button id="btnVerify" type="button">
                         Проверить систему
                     </button>
+                    <button
+                        id="btnClear"
+                        type="button"
+                        aria-label="Очистить данные"
+                        title="Очистить данные"
+                    >
+                        Очистить
+                    </button>
                 </div>
             </section>
 
@@ -154,7 +162,9 @@
                         role="tabpanel"
                         aria-labelledby="tabDescription"
                     >
-                        <pre id="descriptionText"></pre>
+                        <div id="descriptionScroll">
+                            <div id="descriptionText"></div>
+                        </div>
                     </div>
 
                     <div
@@ -163,14 +173,16 @@
                         aria-labelledby="tabTables"
                         hidden
                     >
-                        <h2>Потоки</h2>
-                        <div class="tableWrap">
-                            <table id="streamsTable"></table>
-                        </div>
+                        <div id="tablesScroll">
+                            <h2>Потоки</h2>
+                            <div class="tableWrap">
+                                <table id="streamsTable"></table>
+                            </div>
 
-                        <h2>Система теплообмена</h2>
-                        <div class="tableWrap">
-                            <table id="exchangersTable"></table>
+                            <h2>Система теплообмена</h2>
+                            <div class="tableWrap">
+                                <table id="exchangersTable"></table>
+                            </div>
                         </div>
                     </div>
 
@@ -213,6 +225,16 @@
                 </div>
             </section>
         </div>
+
+        <dialog id="dlgConfirmClear" aria-label="Подтверждение очистки">
+            <form method="dialog">
+                <p>Очистить все данные?</p>
+                <menu>
+                    <button value="cancel">Отмена</button>
+                    <button id="btnConfirmClear" value="ok">ОК</button>
+                </menu>
+            </form>
+        </dialog>
 
         <script type="module" src="/src/main.js"></script>
     </body>
