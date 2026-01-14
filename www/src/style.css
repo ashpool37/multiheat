@@ -197,25 +197,16 @@ button.secondary:hover {
     flex-wrap: wrap;
     align-items: center;
     gap: 6px;
-    margin: 0 0 10px;
+    margin: 0;
 }
 
-/* Строка вкладок с правой зоной для кнопки "Визуализировать" */
+/* Строка вкладок с кнопкой "Визуализировать" рядом с вкладками */
 .mh-tabsRow {
     display: flex;
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
-}
-
-.mh-tabsRight {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-}
-
-.mh-tabsRight #btnVisualize {
-    margin-left: 0;
+    margin: 0 0 10px;
 }
 
 .tab {
