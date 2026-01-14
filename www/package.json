@@ -13,6 +13,7 @@
     "vite": "^7.2.4"
   },
   "dependencies": {
+    "toml": "^3.0.0",
     "zigar-runtime": "^0.15.2"
   }
 }

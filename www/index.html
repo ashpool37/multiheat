@@ -1,13 +1,59 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
     <head>
         <meta charset="UTF-8" />
-        <link rel="icon" type="image/svg+xml" href="/vite.svg" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>multiheat wasm PoC</title>
+        <title>Multiheat 0.0.1</title>
     </head>
     <body>
-        <div id="app">Loading...</div>
+        <div id="app">
+            <header>
+                <h1>Multiheat 0.0.1</h1>
+            </header>
+
+            <section aria-label="Действия">
+                <div>
+                    <button id="btnOpenConfig" type="button">
+                        Открыть файл конфигурации
+                    </button>
+                    <button id="btnDownloadConfig" type="button">
+                        Скачать конфигурацию
+                    </button>
+                    <input
+                        id="fileInput"
+                        type="file"
+                        accept=".toml,text/toml"
+                        hidden
+                    />
+                </div>
+
+                <div>
+                    <button id="btnSolve" type="button">
+                        Синтезировать систему
+                    </button>
+                    <button id="btnVerify" type="button">
+                        Проверить систему
+                    </button>
+                </div>
+            </section>
+
+            <section aria-label="Статус">
+                <div id="statusLabel">
+                    ✅ Готов к работе. Откройте файл конфигурации или вставьте
+                    её в поле ниже.
+                </div>
+            </section>
+
+            <section aria-label="Текст конфигурации">
+                <textarea
+                    id="configText"
+                    rows="24"
+                    spellcheck="false"
+                    placeholder="Вставьте конфигурацию (TOML) сюда..."
+                ></textarea>
+            </section>
+        </div>
+
         <script type="module" src="/src/main.js"></script>
     </body>
 </html>
