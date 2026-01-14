@@ -433,15 +433,15 @@ export const renderVisualization = ({ canvas, state }) => {
   // Утилиты ставим на общей вертикали `xUtilLine` (внутри длины линий),
   // при этом расстояние от последней ячейки до `xUtilLine` равно расстоянию
   // между последними двумя ячейками (равномерная сетка по X).
-  const UTIL_INSET = 18;
-  const DX_CELL = 90; // постоянный шаг между аппаратами
+  const UTIL_INSET = 40;
+  const DX_CELL = 60; // постоянный шаг между аппаратами
 
-  const xUtilLine = x1 - UTIL_INSET;
+  const xUtilLine = x1;
 
   // Ячейки располагаем равномерно по X с постоянным шагом:
   // ... , E(k-1), E(k), ..., E(last), [util]
   // При этом расстояние от последней ячейки до util равно расстоянию между последними двумя ячейками.
-  const cellX = (k) => xUtilLine - DX_CELL * (cells.length - k);
+  const cellX = (k) => xUtilLine - UTIL_INSET - DX_CELL * (cells.length - k);
 
   // Рисуем ячейки теплообмена: вертикальная линия + подпись нагрузки.
   for (let k = 0; k < cells.length; k++) {
@@ -524,8 +524,8 @@ export const renderVisualization = ({ canvas, state }) => {
     // - одна строка (без переноса)
     // - 2 значащие цифры, экспонента при необходимости, без ведущего нуля у дроби
     const qText = fmtUtilityLabel(ex.load);
-    drawLabelBox(ctx, qText, xDot + 12, y - 14, {
-      align: "left",
+    drawLabelBox(ctx, qText, xDot - 14, y - 14, {
+      align: "right",
       textFill: colors.ink,
       boxFill: "#e2e8f0",
       boxStroke: "rgba(15,23,42,0.8)",

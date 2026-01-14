@@ -179,8 +179,8 @@ const redraw = (ui, store, opts = {}) => {
     const RIGHT_GUTTER = 110;
     const MIN_SPAN = 40;
 
-    const DX_CELL = 90; // постоянный шаг между ячейками
-    const UTIL_INSET = 18; // отступ до вертикали утилит от конца линий
+    const UTIL_INSET = 40;
+    const DX_CELL = 60; // постоянный шаг между ячейками
     const CELL_LEFT_MARGIN = 24; // небольшой воздух до первой ячейки
 
     const requiredSpan =
