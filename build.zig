@@ -8,18 +8,18 @@ pub fn build(b: *std.Build) void {
     const toml = b.dependency("toml", .{});
 
     const mod_common = b.addModule("common", .{
-        .root_source_file = b.path("src/common.zig"),
+        .root_source_file = b.path("cli/common.zig"),
         .target = target,
     });
     const mod_multiheat = b.addModule("multiheat", .{
-        .root_source_file = b.path("src/multiheat.zig"),
+        .root_source_file = b.path("cli/multiheat.zig"),
         .target = target,
         .imports = &.{
             .{ .name = "common", .module = mod_common },
         },
     });
     const mod_graph = b.addModule("graph", .{
-        .root_source_file = b.path("src/graph.zig"),
+        .root_source_file = b.path("cli/graph.zig"),
         .target = target,
         .imports = &.{
             .{ .name = "common", .module = mod_common },
@@ -27,7 +27,7 @@ pub fn build(b: *std.Build) void {
         },
     });
     const mod_config = b.addModule("config", .{
-        .root_source_file = b.path("src/config.zig"),
+        .root_source_file = b.path("cli/config.zig"),
         .target = target,
         .imports = &.{
             .{ .name = "common", .module = mod_common },
@@ -37,7 +37,7 @@ pub fn build(b: *std.Build) void {
     const exe = b.addExecutable(.{
         .name = "multiheat",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("src/main.zig"),
+            .root_source_file = b.path("cli/main.zig"),
             .target = target,
             .optimize = optimize,
             .imports = &.{
