@@ -15,6 +15,11 @@ import { renderVisualization } from "../render/visualization.js";
 /**
  * «Высота как TOML» задаётся через CSS (дефолтная высота визуализации),
  * а не через JS и не «в реальном времени».
+ *
+ * Важно:
+ * - контроллер НЕ «следит» за высотой TOML и не пытается синхронизировать её с canvas
+ * - но контроллер может увеличить высоту canvas, если потоков много (чтобы не сжимать линии и подписи)
+ * - обратно к CSS-дефолту возвращаемся, когда увеличение больше не нужно
  */
 
 /**
@@ -102,13 +107,56 @@ const redraw = (ui, store, opts = {}) => {
   if (vizPanel.hidden) return;
   if (!store.visualizationEnabled && !opts.force) return;
 
-  // Высота визуализации задаётся через CSS; JS не управляет дефолтной высотой.
+  // Высота «как TOML» — это CSS-дефолт. Но если потоков много, увеличиваем canvas по высоте,
+  // чтобы сохранить читаемые отступы и подписи. Когда рост не нужен — возвращаемся к CSS-дефолту.
+  const state = store?.state;
+  const hotN = Array.isArray(state?.hot) ? state.hot.length : 0;
+  const coldN = Array.isArray(state?.cold) ? state.cold.length : 0;
+  const n = hotN + coldN;
+
+  // Запоминаем CSS-дефолтную высоту (без inline) один раз, чтобы можно было «вернуться назад».
+  if (!canvas.dataset.mhVizBaseHeightPx) {
+    const prev = canvas.style.height;
+    canvas.style.height = "";
+    const baseRect = canvas.getBoundingClientRect();
+    canvas.style.height = prev;
+    const baseH = Math.floor(baseRect.height);
+    if (Number.isFinite(baseH) && baseH > 0) {
+      canvas.dataset.mhVizBaseHeightPx = String(baseH);
+    }
+  }
+
+  const baseH = Number(canvas.dataset.mhVizBaseHeightPx || "0");
+
+  // Грубая оценка: одна «строка» на поток + поля под подписи.
+  // Промежуточные температуры по аппаратам не рисуем, поэтому этого достаточно.
+  let requiredH = 0;
+  if (n > 0) {
+    const padTop = 24;
+    const padBottom = 36; // + место под подписи нагрузок/легенду
+    const rowStep = 28;
+    requiredH = padTop + padBottom + (n - 1) * rowStep;
+  }
+
+  // Если требуемая высота не превышает CSS-дефолт — убираем inline height.
+  // Если превышает — задаём inline height (только увеличиваем, ширину не трогаем).
+  if (Number.isFinite(baseH) && baseH > 0 && requiredH > 0) {
+    if (requiredH <= baseH + 1) {
+      if (canvas.style.height) canvas.style.height = "";
+    } else {
+      const hPx = Math.ceil(requiredH);
+      if (canvas.dataset.mhVizHeightPx !== String(hPx)) {
+        canvas.style.height = `${hPx}px`;
+        canvas.dataset.mhVizHeightPx = String(hPx);
+      }
+    }
+  }
 
   const r = canvas.getBoundingClientRect();
   if (!Number.isFinite(r.width) || r.width <= 0) return;
   if (!Number.isFinite(r.height) || r.height <= 0) return;
 
-  renderVisualization({ canvas });
+  renderVisualization({ canvas, state });
 };
 
 /**

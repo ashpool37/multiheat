@@ -291,20 +291,25 @@ export const startApp = async () => {
     renderTables,
   });
 
-  const sync = createSync({
-    ui,
-    store,
-    refreshAllViews: views.refreshAllViews,
-  });
-
   // Контроллер визуализации создаём чуть позже (после setupToggle),
   // но ссылка нужна уже здесь, чтобы не попадать в TDZ внутри onUiModeChange.
   let visualization = null;
 
+  const refreshAllViews = (forceEditors = false) => {
+    views.refreshAllViews(forceEditors);
+    if (visualization) visualization.redraw();
+  };
+
+  const sync = createSync({
+    ui,
+    store,
+    refreshAllViews,
+  });
+
   const tabs = createTabsController({
     ui,
     store,
-    refreshAllViews: views.refreshAllViews,
+    refreshAllViews,
     updateNonEditableViews: views.updateNonEditableViews,
     updateEditorsFromState: views.updateEditorsFromState,
     syncFromActiveEditorIfNeeded: sync.syncFromActiveEditorIfNeeded,
@@ -345,7 +350,7 @@ export const startApp = async () => {
   tabs.setActiveTab(Tab.toml);
 
   store.state = defaultState();
-  views.refreshAllViews(true);
+  refreshAllViews(true);
 
   // Почему: режимы «Скрыть»/«Визуализировать» должны применяться после первичного рендера.
   visualization.apply();
