@@ -41,15 +41,7 @@ jobs:
         run: npm ci
 
       - name: Build (Vite)
-        run: |
-          REPO="${{ github.event.repository.name }}"
-          OWNER="${{ github.repository_owner }}"
-          if [ "$REPO" = "${OWNER}.github.io" ]; then
-            BASE="/"
-          else
-            BASE="/${REPO}/"
-          fi
-          npm run build -- --base="$BASE"
+        run: npm run build
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

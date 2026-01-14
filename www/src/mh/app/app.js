@@ -56,6 +56,11 @@ const setUiEnabled = (ui, enabled) => {
   ui.csv.solutionTextarea.disabled = !enabled;
 };
 
+const setSolverEnabled = (ui, enabled) => {
+  ui.buttons.solve.disabled = !enabled;
+  ui.buttons.verify.disabled = !enabled;
+};
+
 const createSync = ({ ui, store, refreshAllViews }) => {
   const syncStateFromTomlEditor = () => {
     const text = ui.toml.textarea.value ?? "";
@@ -291,7 +296,12 @@ export const startApp = async () => {
 
   // --- Привязка событий (без WASM) ---
 
-  setUiEnabled(ui, false);
+  setUiEnabled(ui, true);
+  setSolverEnabled(ui, false);
+
+  setupToggle("#btnVisualize");
+  setupToggle("#btnTest");
+  setupTestMode({ ui, switchTab: tabs.switchTab });
 
   // Флаги dirty редакторов
   ui.toml.textarea.addEventListener("input", () => {
@@ -307,6 +317,9 @@ export const startApp = async () => {
   // Вкладки
   tabs.hookTabEvents();
   tabs.setActiveTab(Tab.toml);
+
+  store.state = defaultState();
+  views.refreshAllViews(true);
 
   // «Открыть»: пункты меню → выбор файла
   ui.buttons.openToml.addEventListener("click", () => ui.inputs.toml.click());
@@ -698,7 +711,7 @@ export const startApp = async () => {
       typeof multiheat.HeatExchanger === "function";
 
     if (!ok) {
-      setUiEnabled(ui, false);
+      setSolverEnabled(ui, false);
       setStatus(
         "err",
         "Модуль вычислений загружен, но требуемые функции недоступны.",
@@ -707,27 +720,17 @@ export const startApp = async () => {
     }
 
     setUiEnabled(ui, true);
-
-    // Два независимых переключателя-заглушки
-    setupToggle("#btnVisualize");
-    setupToggle("#btnTest");
-
-    // Стартуем с пустого состояния: данные будут вставлены/загружены пользователем
-    store.state = defaultState();
-    views.refreshAllViews(true);
+    setSolverEnabled(ui, true);
 
     setStatus(
       "ok",
       "Готов к работе. Откройте файл конфигурации или вставьте её в поле ниже.",
     );
 
-    // Режим тестирования: показывает заглушку и по умолчанию переключает на «Скрыть»
-    setupTestMode({ ui, switchTab: tabs.switchTab });
-
     return { ui, store, multiheat };
   } catch (e) {
     logError("Не удалось загрузить модуль вычислений", e);
-    setUiEnabled(ui, false);
+    setSolverEnabled(ui, false);
     setStatus(
       "err",
       "Не удалось загрузить модуль вычислений. Подробности в консоли браузера.",

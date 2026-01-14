@@ -1,7 +1,8 @@
 import { defineConfig } from "vite";
 import zigar from "rollup-plugin-zigar";
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  base: command === "build" ? "./" : "/",
   plugins: [
     zigar({
       optimize: "ReleaseFast",
@@ -10,4 +11,4 @@ export default defineConfig({
       ignoreBuildFile: true,
     }),
   ],
-});
+}));
