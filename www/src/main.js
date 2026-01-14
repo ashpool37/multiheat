@@ -706,11 +706,14 @@ const renderTables = (state) => {
 };
 
 const updateNonEditableViews = () => {
+  if (store.viewsSuspended) return;
   renderDescriptionHtml(store.state, ui.description.pre);
   renderTables(store.state);
 };
 
 const updateEditorsFromState = (force = false) => {
+  if (store.viewsSuspended) return;
+
   const tomlText = emitToml(store.state);
   const csvStreams = emitCsvStreams(store.state);
   const csvSolution = emitCsvSolution(store.state);
@@ -741,6 +744,7 @@ const updateEditorsFromState = (force = false) => {
 };
 
 const refreshAllViews = (forceEditors = false) => {
+  if (store.viewsSuspended) return;
   updateNonEditableViews();
   updateEditorsFromState(forceEditors);
 };
@@ -874,6 +878,7 @@ const Tab = {
   tables: "tables",
   toml: "toml",
   csv: "csv",
+  hide: "hide",
 };
 
 const ui = {
@@ -912,6 +917,7 @@ const ui = {
     tables: $("#tabTables"),
     toml: $("#tabToml"),
     csv: $("#tabCsv"),
+    hide: $("#tabHide"),
   },
 
   panels: {
@@ -919,7 +925,11 @@ const ui = {
     tables: $("#panelTables"),
     toml: $("#panelToml"),
     csv: $("#panelCsv"),
+    hide: $("#panelHide"),
   },
+
+  tabPanels: $("#tabPanels"),
+  testModeBlock: $("#testModeBlock"),
 
   description: {
     pre: $("#descriptionText"),
@@ -943,6 +953,7 @@ const ui = {
 const store = {
   state: defaultState(),
   activeTab: Tab.toml,
+  viewsSuspended: false,
   dirty: {
     toml: false,
     csvStreams: false,
@@ -979,7 +990,7 @@ const syncStateFromTomlEditor = () => {
   store.dirty.toml = false;
   store.dirty.csvStreams = false;
   store.dirty.csvSolution = false;
-  refreshAllViews(true);
+  if (!store.viewsSuspended) refreshAllViews(true);
 };
 
 const syncStateFromCsvEditors = () => {
@@ -1020,10 +1031,12 @@ const syncStateFromCsvEditors = () => {
   store.dirty.toml = false;
   store.dirty.csvStreams = false;
   store.dirty.csvSolution = false;
-  refreshAllViews(true);
+  if (!store.viewsSuspended) refreshAllViews(true);
 };
 
 const syncFromActiveEditorIfNeeded = () => {
+  if (store.viewsSuspended) return;
+
   if (store.activeTab === Tab.toml && store.dirty.toml) {
     syncStateFromTomlEditor();
     return;
@@ -1036,15 +1049,30 @@ const syncFromActiveEditorIfNeeded = () => {
   }
 };
 
-const switchTab = (nextTab) => {
-  const goingToNonEditable =
-    nextTab === Tab.description || nextTab === Tab.tables;
+const setViewsSuspended = (suspended) => {
+  store.viewsSuspended = suspended;
+  if (ui.tabPanels) ui.tabPanels.hidden = suspended;
+};
 
+const switchTab = (nextTab) => {
   try {
-    // Почему: проверяем только перед "чтением" (Описание/Таблицы), а не при переходах между редактируемыми вкладками
+    if (nextTab === Tab.hide) {
+      setViewsSuspended(true);
+      setActiveTab(nextTab);
+      return;
+    }
+
+    if (store.viewsSuspended) {
+      setViewsSuspended(false);
+      refreshAllViews(true);
+    }
+
+    const goingToNonEditable =
+      nextTab === Tab.description || nextTab === Tab.tables;
+
+    // Почему: не проверяем при вставке, но проверяем перед "чтением" (Описание/Таблица)
     if (goingToNonEditable) {
       syncFromActiveEditorIfNeeded();
-      // Почему: пустая система допустима для просмотра "Описание/Таблица"
     }
 
     setActiveTab(nextTab);
@@ -1068,6 +1096,16 @@ const switchTab = (nextTab) => {
 const onUploadToml = async (file) => {
   try {
     const text = await file.text();
+
+    if (store.viewsSuspended) {
+      store.state = parseTomlToState(text);
+      store.dirty.toml = false;
+      store.dirty.csvStreams = false;
+      store.dirty.csvSolution = false;
+      setStatus("ok", "TOML загружен.");
+      return;
+    }
+
     ui.toml.textarea.value = text;
     store.dirty.toml = true;
 
@@ -1086,6 +1124,22 @@ const onUploadToml = async (file) => {
 const onUploadCsvStreams = async (file) => {
   try {
     const text = await file.text();
+
+    if (store.viewsSuspended) {
+      const partial = parseCsvStreamsToStatePartial(text);
+      store.state = validateAndNormalizeState({
+        multiheat: { version: "0.0.1", temp_unit: "K" },
+        hot: partial.hot,
+        cold: partial.cold,
+        exchanger: [],
+      });
+      store.dirty.toml = false;
+      store.dirty.csvStreams = false;
+      store.dirty.csvSolution = false;
+      setStatus("warn", "CSV (потоки) загружен. Решение очищено.");
+      return;
+    }
+
     ui.csv.streamsTextarea.value = text;
     store.dirty.csvStreams = true;
 
@@ -1108,6 +1162,35 @@ const onUploadCsvStreams = async (file) => {
 const onUploadCsvSolution = async (file) => {
   try {
     const text = await file.text();
+
+    if (store.viewsSuspended) {
+      const hotLen = Array.isArray(store.state?.hot)
+        ? store.state.hot.length
+        : 0;
+      const coldLen = Array.isArray(store.state?.cold)
+        ? store.state.cold.length
+        : 0;
+
+      if (hotLen === 0 || coldLen === 0) {
+        throw new Error(
+          "Невозможно загрузить CSV (решение): сначала загрузите CSV (потоки) или TOML.",
+        );
+      }
+
+      const exchangers = parseCsvSolutionToExchangers(text, hotLen, coldLen);
+
+      store.state = validateAndNormalizeState({
+        ...store.state,
+        exchanger: exchangers,
+      });
+      store.dirty.toml = false;
+      store.dirty.csvStreams = false;
+      store.dirty.csvSolution = false;
+
+      setStatus("ok", "CSV (решение) загружен.");
+      return;
+    }
+
     ui.csv.solutionTextarea.value = text;
     store.dirty.csvSolution = true;
 
@@ -1140,6 +1223,7 @@ const hookEvents = () => {
   ui.tabs.tables.addEventListener("click", () => switchTab(Tab.tables));
   ui.tabs.toml.addEventListener("click", () => switchTab(Tab.toml));
   ui.tabs.csv.addEventListener("click", () => switchTab(Tab.csv));
+  ui.tabs.hide.addEventListener("click", () => switchTab(Tab.hide));
 
   ui.buttons.openToml.addEventListener("click", () => ui.inputs.toml.click());
   ui.buttons.openCsvStreams.addEventListener("click", () =>
@@ -1172,6 +1256,13 @@ const hookEvents = () => {
 
   ui.buttons.saveToml.addEventListener("click", async () => {
     try {
+      if (store.viewsSuspended) {
+        setStatus(
+          "warn",
+          "Режим «Скрыть» активен: сохранение представлений отключено.",
+        );
+        return;
+      }
       syncFromActiveEditorIfNeeded();
       const text = emitToml(store.state);
       await downloadText(text, "multiheat.toml", "text/toml", [".toml"]);
@@ -1191,6 +1282,13 @@ const hookEvents = () => {
 
   ui.buttons.saveCsvStreams.addEventListener("click", async () => {
     try {
+      if (store.viewsSuspended) {
+        setStatus(
+          "warn",
+          "Режим «Скрыть» активен: сохранение представлений отключено.",
+        );
+        return;
+      }
       syncFromActiveEditorIfNeeded();
       const text = emitCsvStreams(store.state);
       await downloadText(text, "multiheat_streams.csv", "text/csv", [".csv"]);
@@ -1210,6 +1308,13 @@ const hookEvents = () => {
 
   ui.buttons.saveCsvSolution.addEventListener("click", async () => {
     try {
+      if (store.viewsSuspended) {
+        setStatus(
+          "warn",
+          "Режим «Скрыть» активен: сохранение представлений отключено.",
+        );
+        return;
+      }
       syncFromActiveEditorIfNeeded();
       const text = emitCsvSolution(store.state);
       await downloadText(text, "multiheat_solution.csv", "text/csv", [".csv"]);
@@ -1422,6 +1527,29 @@ const init = async () => {
 };
 
 await init();
+
+// Режим тестирования: показывает заглушку и по умолчанию уводит во вкладку "Скрыть".
+(() => {
+  const btnTest = document.querySelector("#btnTest");
+  const block = ui.testModeBlock;
+
+  if (!btnTest || !block) return;
+
+  const apply = () => {
+    const active = btnTest.getAttribute("aria-pressed") === "true";
+    block.hidden = !active;
+
+    if (active) {
+      switchTab(Tab.hide);
+    }
+  };
+
+  btnTest.addEventListener("click", () => {
+    queueMicrotask(apply);
+  });
+
+  apply();
+})();
 
 (() => {
   const openBtn = ui.buttons.openMenu;

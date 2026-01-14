@@ -428,3 +428,18 @@ button.secondary:hover {
     background: #f1f5f9;
     border-color: #e2e8f0;
 }
+
+/* Блок режима тестирования: заглушка, визуально как большая кнопка */
+#testModeBlock {
+    width: 100%;
+    min-height: 156px; /* примерно высота 3 кнопок */
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    pointer-events: none;
+}

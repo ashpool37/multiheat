@@ -170,6 +170,8 @@
                     </div>
                 </section>
 
+                <div id="testModeBlock" class="mh-testBlock" hidden></div>
+
                 <div class="row"></div>
 
                 <section aria-label="Вкладки">
@@ -214,12 +216,22 @@
                         >
                             CSV
                         </button>
+                        <button
+                            id="tabHide"
+                            class="tab"
+                            type="button"
+                            role="tab"
+                            aria-selected="false"
+                            aria-controls="panelHide"
+                        >
+                            Скрыть
+                        </button>
                     </div>
                 </section>
             </div>
 
             <section aria-label="Представления">
-                <div class="tabPanels">
+                <div id="tabPanels" class="tabPanels">
                     <div
                         id="panelDescription"
                         role="tabpanel"
@@ -281,6 +293,13 @@
                             placeholder="Вставьте CSV (решение) сюда..."
                         ></textarea>
                     </div>
+
+                    <div
+                        id="panelHide"
+                        role="tabpanel"
+                        aria-labelledby="tabHide"
+                        hidden
+                    ></div>
                 </div>
             </section>
         </div>
