@@ -235,75 +235,81 @@
             </div>
 
             <section aria-label="Представления">
-                <div id="tabPanels" class="tabPanels">
-                    <div
-                        id="panelDescription"
-                        role="tabpanel"
-                        aria-labelledby="tabDescription"
-                    >
-                        <div id="descriptionText"></div>
-                    </div>
-
-                    <div
-                        id="panelTables"
-                        role="tabpanel"
-                        aria-labelledby="tabTables"
-                        hidden
-                    >
-                        <h2>Потоки</h2>
-                        <div class="tableWrap">
-                            <table id="streamsTable"></table>
+                <div id="viewsLayout" class="mh-viewsLayout">
+                    <div id="tabPanels" class="tabPanels">
+                        <div
+                            id="panelDescription"
+                            role="tabpanel"
+                            aria-labelledby="tabDescription"
+                        >
+                            <div id="descriptionText"></div>
                         </div>
 
-                        <h2>Система теплообмена</h2>
-                        <div class="tableWrap">
-                            <table id="exchangersTable"></table>
+                        <div
+                            id="panelTables"
+                            role="tabpanel"
+                            aria-labelledby="tabTables"
+                            hidden
+                        >
+                            <h2>Потоки</h2>
+                            <div class="tableWrap">
+                                <table id="streamsTable"></table>
+                            </div>
+
+                            <h2>Система теплообмена</h2>
+                            <div class="tableWrap">
+                                <table id="exchangersTable"></table>
+                            </div>
                         </div>
+
+                        <div
+                            id="panelToml"
+                            role="tabpanel"
+                            aria-labelledby="tabToml"
+                            hidden
+                        >
+                            <textarea
+                                id="tomlText"
+                                rows="24"
+                                spellcheck="false"
+                                placeholder="Вставьте конфигурацию (TOML) сюда..."
+                            ></textarea>
+                        </div>
+
+                        <div
+                            id="panelCsv"
+                            role="tabpanel"
+                            aria-labelledby="tabCsv"
+                            hidden
+                        >
+                            <h2>CSV (потоки)</h2>
+                            <textarea
+                                id="csvStreamsText"
+                                rows="12"
+                                spellcheck="false"
+                                placeholder="Вставьте CSV (потоки) сюда..."
+                            ></textarea>
+
+                            <h2>CSV (решение)</h2>
+                            <textarea
+                                id="csvSolutionText"
+                                rows="12"
+                                spellcheck="false"
+                                placeholder="Вставьте CSV (решение) сюда..."
+                            ></textarea>
+                        </div>
+
+                        <div
+                            id="panelHide"
+                            role="tabpanel"
+                            aria-labelledby="tabHide"
+                            hidden
+                        ></div>
                     </div>
 
-                    <div
-                        id="panelToml"
-                        role="tabpanel"
-                        aria-labelledby="tabToml"
-                        hidden
-                    >
-                        <textarea
-                            id="tomlText"
-                            rows="24"
-                            spellcheck="false"
-                            placeholder="Вставьте конфигурацию (TOML) сюда..."
-                        ></textarea>
+                    <div id="vizPanel" class="mh-vizPanel" hidden>
+                        <canvas id="vizCanvas" class="mh-vizCanvas"></canvas>
                     </div>
-
-                    <div
-                        id="panelCsv"
-                        role="tabpanel"
-                        aria-labelledby="tabCsv"
-                        hidden
-                    >
-                        <h2>CSV (потоки)</h2>
-                        <textarea
-                            id="csvStreamsText"
-                            rows="12"
-                            spellcheck="false"
-                            placeholder="Вставьте CSV (потоки) сюда..."
-                        ></textarea>
-
-                        <h2>CSV (решение)</h2>
-                        <textarea
-                            id="csvSolutionText"
-                            rows="12"
-                            spellcheck="false"
-                            placeholder="Вставьте CSV (решение) сюда..."
-                        ></textarea>
-                    </div>
-
-                    <div
-                        id="panelHide"
-                        role="tabpanel"
-                        aria-labelledby="tabHide"
-                        hidden
-                    ></div>
                 </div>
             </section>
         </div>

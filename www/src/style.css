@@ -209,6 +209,28 @@ button.secondary:hover {
     margin: 0 0 10px;
 }
 
+/* Контейнер представлений (вкладки + визуализация). Сплит включается inline-стилями из JS. */
+.mh-viewsLayout {
+    width: 100%;
+}
+
+/* Панель визуализации: по виду как tabPanels, чтобы интерфейс был консистентным. */
+.mh-vizPanel {
+    box-sizing: border-box;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    background-color: #ffffff;
+    padding: 12px;
+    overflow: hidden;
+}
+
+/* Canvas растягиваем на всю панель; фактический DPR-скейл делается в JS. */
+.mh-vizCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
 .tab {
     border-radius: 12px;
     border: 1px solid #cbd5e1;

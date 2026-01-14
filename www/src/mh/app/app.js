@@ -3,6 +3,7 @@ import { createStore, clearDirtyFlags } from "./store.js";
 import { createStatus } from "./status.js";
 import { createViewsCoordinator } from "./views.js";
 import { createTabsController, Tab } from "./tabs.js";
+import { createVisualizationController } from "./visualization.js";
 
 import {
   logError,
@@ -208,29 +209,32 @@ const setupDropdownMenus = (ui) => {
   }
 };
 
-const setupTestMode = ({ ui, switchTab }) => {
-  const btnTest = document.querySelector("#btnTest");
-  const btnVisualize = document.querySelector("#btnVisualize");
+const setupTestMode = ({ ui, switchTab, visualization }) => {
+  const btnTest = ui?.toggles?.test ?? document.querySelector("#btnTest");
   const block = ui.testModeBlock;
 
   if (!btnTest || !block) return;
-
-  const setPressed = (btn, pressed) => {
-    if (!btn) return;
-    btn.setAttribute("aria-pressed", pressed ? "true" : "false");
-  };
 
   const apply = () => {
     const active = btnTest.getAttribute("aria-pressed") === "true";
     block.hidden = !active;
 
-    if (active) {
-      setPressed(btnVisualize, false);
-      switchTab(Tab.hide);
+    if (!active) return;
+
+    // Почему: тестовый режим должен быть «дешёвым» — визуализацию выключаем и уходим в «Скрыть».
+    if (visualization && typeof visualization.setEnabled === "function") {
+      visualization.setEnabled(false);
+    } else {
+      const btnVisualize = document.querySelector("#btnVisualize");
+      if (btnVisualize) btnVisualize.setAttribute("aria-pressed", "false");
     }
+
+    switchTab(Tab.hide);
   };
 
   btnTest.addEventListener("click", () => {
+    // Почему: `setupToggle()` меняет `aria-pressed` в обработчике клика.
+    // Нам нужно прочитать уже обновлённое значение.
     queueMicrotask(apply);
   });
 
@@ -293,6 +297,10 @@ export const startApp = async () => {
     refreshAllViews: views.refreshAllViews,
   });
 
+  // Контроллер визуализации создаём чуть позже (после setupToggle),
+  // но ссылка нужна уже здесь, чтобы не попадать в TDZ внутри onUiModeChange.
+  let visualization = null;
+
   const tabs = createTabsController({
     ui,
     store,
@@ -302,6 +310,10 @@ export const startApp = async () => {
     syncFromActiveEditorIfNeeded: sync.syncFromActiveEditorIfNeeded,
     logError,
     setStatus,
+    onUiModeChange: () => {
+      // Почему: «Скрыть»/переключение вкладок меняют разметку; визуализация должна подстроиться.
+      if (visualization) visualization.apply();
+    },
   });
 
   // --- Привязка событий (без WASM) ---
@@ -311,7 +323,11 @@ export const startApp = async () => {
 
   setupToggle("#btnVisualize");
   setupToggle("#btnTest");
-  setupTestMode({ ui, switchTab: tabs.switchTab });
+
+  visualization = createVisualizationController({ ui, store });
+  visualization.hookEvents();
+
+  setupTestMode({ ui, switchTab: tabs.switchTab, visualization });
 
   // Флаги dirty редакторов
   ui.toml.textarea.addEventListener("input", () => {
@@ -330,6 +346,9 @@ export const startApp = async () => {
 
   store.state = defaultState();
   views.refreshAllViews(true);
+
+  // Почему: режимы «Скрыть»/«Визуализировать» должны применяться после первичного рендера.
+  visualization.apply();
 
   // «Открыть»: пункты меню → выбор файла
   ui.buttons.openToml.addEventListener("click", () => ui.inputs.toml.click());

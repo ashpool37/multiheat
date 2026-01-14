@@ -29,6 +29,11 @@ export const buildUiRefs = (root = document) => {
       clear: q("#btnClear"),
     },
 
+    toggles: {
+      visualize: q("#btnVisualize"),
+      test: q("#btnTest"),
+    },
+
     menus: {
       open: q("#menuOpen"),
       save: q("#menuSave"),
@@ -56,6 +61,7 @@ export const buildUiRefs = (root = document) => {
       hide: q("#panelHide"),
     },
 
+    viewsLayout: q("#viewsLayout"),
     tabPanels: q("#tabPanels"),
     testModeBlock: q("#testModeBlock"),
 
@@ -75,6 +81,11 @@ export const buildUiRefs = (root = document) => {
     tables: {
       streamsTable: q("#streamsTable"),
       exchangersTable: q("#exchangersTable"),
+    },
+
+    visualization: {
+      panel: q("#vizPanel"),
+      canvas: q("#vizCanvas"),
     },
   };
 };

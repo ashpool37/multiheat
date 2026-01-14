@@ -28,6 +28,7 @@ export const Tab = {
  * @param {() => void} deps.syncFromActiveEditorIfNeeded Синхронизировать `store.state` из активного редактора при необходимости
  * @param {(context: string, e: unknown) => void} deps.logError Логирование ошибок
  * @param {("ok"|"warn"|"err", message: string) => void} deps.setStatus Обновление статусной строки
+ * @param {(info: { ui: any, store: any }) => void} [deps.onUiModeChange] Хук: вызывается после изменения режима/разметки (вкладка/«Скрыть»)
  */
 export const createTabsController = ({
   ui,
@@ -38,8 +39,9 @@ export const createTabsController = ({
   syncFromActiveEditorIfNeeded,
   logError,
   setStatus,
+  onUiModeChange,
 }) => {
-  const setActiveTab = (tab) => {
+  const setActiveTab = (tab, notify = true) => {
     store.activeTab = tab;
 
     for (const [k, btn] of Object.entries(ui.tabs)) {
@@ -51,23 +53,31 @@ export const createTabsController = ({
     for (const [k, panel] of Object.entries(ui.panels)) {
       panel.hidden = k !== tab;
     }
+
+    if (notify && typeof onUiModeChange === "function") {
+      onUiModeChange({ ui, store });
+    }
   };
 
-  const setViewsSuspended = (suspended) => {
+  const setViewsSuspended = (suspended, notify = true) => {
     store.viewsSuspended = suspended;
     if (ui.tabPanels) ui.tabPanels.hidden = suspended;
+
+    if (notify && typeof onUiModeChange === "function") {
+      onUiModeChange({ ui, store });
+    }
   };
 
   const switchTab = (nextTab) => {
     try {
       if (nextTab === Tab.hide) {
-        setViewsSuspended(true);
+        setViewsSuspended(true, false);
         setActiveTab(nextTab);
         return;
       }
 
       if (store.viewsSuspended) {
-        setViewsSuspended(false);
+        setViewsSuspended(false, false);
         refreshAllViews(true);
       }
 
