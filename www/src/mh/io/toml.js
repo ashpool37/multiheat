@@ -5,8 +5,7 @@ import { fmtNum } from "../util/number.js";
 import { defaultState, validateAndNormalizeState } from "../model/state.js";
 
 /**
- * Parse TOML text into canonical normalized state.
- * Behavior is intentionally identical to the previous monolithic implementation.
+ * `parseTomlToState(text)` → каноническое состояние (после `validateAndNormalizeState`).
  *
  * @param {string} text
  * @returns {ReturnType<typeof validateAndNormalizeState>}
@@ -32,8 +31,7 @@ export const parseTomlToState = (text) => {
 };
 
 /**
- * Emit canonical state to TOML text.
- * Behavior is intentionally identical to the previous monolithic implementation.
+ * `emitToml(state)` → TOML.
  *
  * @param {ReturnType<typeof validateAndNormalizeState>} state
  * @returns {string}
@@ -61,7 +59,8 @@ export const emitToml = (state) => {
   if (Array.isArray(state.exchanger) && state.exchanger.length > 0) {
     for (const ex of state.exchanger) {
       lines.push("[[exchanger]]");
-      if (ex.hot !== null && ex.hot !== undefined) lines.push(`hot = ${ex.hot}`);
+      if (ex.hot !== null && ex.hot !== undefined)
+        lines.push(`hot = ${ex.hot}`);
       if (ex.cold !== null && ex.cold !== undefined)
         lines.push(`cold = ${ex.cold}`);
       lines.push(`load = ${fmtNum(ex.load)}`);

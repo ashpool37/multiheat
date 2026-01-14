@@ -1,11 +1,10 @@
 import { fmtNum } from "../util/number.js";
 
 /**
- * Render the human-readable description view into a host element.
- * Behavior is intentionally kept identical to the original monolithic `main.js`.
+ * Рендерит текстовое описание системы в элемент `host`.
  *
- * @param {object} state Canonical state ({ hot, cold, exchanger })
- * @param {HTMLElement} host Container element to render into
+ * @param {object} state Каноническое состояние ({ hot, cold, exchanger })
+ * @param {HTMLElement} host Контейнер для вывода
  */
 export const renderDescriptionHtml = (state, host) => {
   host.innerHTML = "";

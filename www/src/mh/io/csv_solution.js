@@ -2,8 +2,7 @@ import { csvJoin, parseCsv } from "../util/csv.js";
 import { fmtNum, isFinitePositive, parseNumber } from "../util/number.js";
 
 /**
- * Emit CSV for the current solution (exchangers).
- * Preserves the exact headers/labels/types used previously in `main.js`.
+ * `emitCsvSolution(state)` → CSV-представление решения (массив `state.exchanger`).
  *
  * @param {any} state
  * @returns {string}
@@ -40,8 +39,7 @@ export const emitCsvSolution = (state) => {
 };
 
 /**
- * Parse CSV solution into canonical exchanger records.
- * Preserves parsing rules/errors from the previous implementation in `main.js`.
+ * `parseCsvSolutionToExchangers(text, hotLen, coldLen)` → список теплообменников канонического вида.
  *
  * @param {string} text
  * @param {number} hotLen

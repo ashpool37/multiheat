@@ -1,14 +1,11 @@
 /**
- * File download / save helpers.
+ * Утилиты сохранения текста в файл.
  *
- * Uses the File System Access API when available, with a Blob + <a download>
- * fallback for browsers that don't support it.
- *
- * Behavior is intended to match the previous implementation in `main.js`.
+ * Использует File System Access API при наличии, иначе — Blob + `<a download>`.
  */
 
 /**
- * Save a UTF-8 text file to the user's machine.
+ * Сохранить текст (UTF-8) в файл.
  *
  * @param {string} text
  * @param {string} suggestedName
@@ -28,7 +25,7 @@ export const downloadText = async (text, suggestedName, mime, exts) => {
     return;
   }
 
-  // Fallback for browsers without File System Access API.
+  // Запасной вариант для браузеров без File System Access API.
   const blob = new Blob([text], { type: `${mime};charset=utf-8` });
   const url = URL.createObjectURL(blob);
 

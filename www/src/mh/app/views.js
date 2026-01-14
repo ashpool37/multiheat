@@ -1,22 +1,19 @@
 /**
- * View refresh coordinator.
+ * Координатор обновления представлений.
  *
- * Responsibilities:
- * - Keep non-editable views (Description/Tables) in sync with canonical state.
- * - Keep editor views (TOML/CSV textareas) in sync with canonical state,
- *   respecting dirty flags and focused editors.
- * - Implement the "Hide" mode behavior via `viewsSuspended`.
+ * Синхронизирует:
+ * - неизменяемые представления (Описание/Таблицы) с `store.state`
+ * - редакторы (TOML/CSV) с учётом `store.dirty` и фокуса
  *
- * This module is designed to preserve behavior/performance of the prior
- * monolithic implementation in `main.js`.
+ * Режим «Скрыть» реализован через `store.viewsSuspended`.
  */
 
 /**
- * Create a coordinator bound to the app's `store` + `ui`.
+ * Создать координатор обновления представлений для `store` и `ui`.
  *
- * Required dependencies are injected to keep this module decoupled:
- * - emitters: `emitToml`, `emitCsvStreams`, `emitCsvSolution`
- * - renderers: `renderDescriptionHtml`, `renderTables`
+ * Зависимости передаются извне:
+ * - эмиттеры: `emitToml`, `emitCsvStreams`, `emitCsvSolution`
+ * - рендереры: `renderDescriptionHtml`, `renderTables`
  *
  * @param {object} deps
  * @param {object} deps.store
@@ -43,12 +40,11 @@ export const createViewsCoordinator = ({
   };
 
   /**
-   * Update editor textareas from canonical state.
+   * Обновить редакторы (textarea) из канонического состояния.
    *
-   * Matches previous behavior:
-   * - do nothing when views are suspended
-   * - do not overwrite a textarea while it's focused AND marked dirty,
-   *   unless `force === true`
+   * Правила:
+   * - при `store.viewsSuspended` ничего не делаем
+   * - не перезаписываем редактор, если он в фокусе и помечен как dirty (кроме `force === true`)
    *
    * @param {boolean} [force=false]
    */
@@ -87,8 +83,7 @@ export const createViewsCoordinator = ({
   };
 
   /**
-   * Refresh all views derived from canonical state.
-   * Does nothing if views are suspended.
+   * Обновить все представления, если они не приостановлены.
    *
    * @param {boolean} [forceEditors=false]
    */
@@ -99,11 +94,7 @@ export const createViewsCoordinator = ({
   };
 
   /**
-   * Toggle "Hide" mode.
-   *
-   * Matches previous behavior:
-   * - `store.viewsSuspended` gates all view regeneration
-   * - `ui.tabPanels.hidden` hides the representations area
+   * Включить/выключить режим «Скрыть» (приостановка регенерации представлений).
    *
    * @param {boolean} suspended
    */

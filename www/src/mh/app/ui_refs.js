@@ -1,8 +1,8 @@
 import { $ } from "../util/dom.js";
 
 /**
- * Build and return a structured set of UI element references.
- * Throws if any required element is missing (fail-fast, same as previous `main.js`).
+ * Собирает ссылки на элементы интерфейса.
+ * Если обязательный элемент не найден — выбрасывает исключение.
  *
  * @param {ParentNode} [root=document]
  */

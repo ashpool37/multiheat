@@ -1,10 +1,10 @@
 /**
- * Tab controller.
+ * Контроллер вкладок.
  *
- * Extracted from the previous monolithic `main.js` without changing behavior:
- * - "Hide" tab suspends view updates (`store.viewsSuspended = true`) and hides `ui.tabPanels`
- * - Switching to non-editable views (Description/Table) validates/syncs active editors first
- * - Switching away from Hide re-enables views and forces a full refresh
+ * Правила:
+ * - вкладка «Скрыть» включает `store.viewsSuspended` и скрывает `ui.tabPanels`
+ * - при переходе на «Описание»/«Таблица» сначала синхронизируем активный редактор
+ * - при выходе из «Скрыть» возобновляем обновления и принудительно обновляем представления
  */
 
 /** @readonly */
@@ -17,15 +17,17 @@ export const Tab = {
 };
 
 /**
+ * Создать контроллер вкладок.
+ *
  * @param {object} deps
- * @param {any} deps.ui
- * @param {any} deps.store
- * @param {(forceEditors?: boolean) => void} deps.refreshAllViews
- * @param {() => void} deps.updateNonEditableViews
- * @param {(force?: boolean) => void} deps.updateEditorsFromState
- * @param {() => void} deps.syncFromActiveEditorIfNeeded
- * @param {(context: string, e: unknown) => void} deps.logError
- * @param {("ok"|"warn"|"err", message: string) => void} deps.setStatus
+ * @param {any} deps.ui Ссылки на элементы интерфейса
+ * @param {any} deps.store Хранилище состояния приложения
+ * @param {(forceEditors?: boolean) => void} deps.refreshAllViews Обновить все представления
+ * @param {() => void} deps.updateNonEditableViews Обновить «Описание» и «Таблица»
+ * @param {(force?: boolean) => void} deps.updateEditorsFromState Обновить редакторы TOML/CSV из `store.state`
+ * @param {() => void} deps.syncFromActiveEditorIfNeeded Синхронизировать `store.state` из активного редактора при необходимости
+ * @param {(context: string, e: unknown) => void} deps.logError Логирование ошибок
+ * @param {("ok"|"warn"|"err", message: string) => void} deps.setStatus Обновление статусной строки
  */
 export const createTabsController = ({
   ui,
@@ -72,7 +74,7 @@ export const createTabsController = ({
       const goingToNonEditable =
         nextTab === Tab.description || nextTab === Tab.tables;
 
-      // Why: don't validate on every paste/keystroke, but validate before "reading" (Description/Table)
+      // Почему: не валидируем на каждый ввод, но валидируем перед «чтением» (Описание/Таблица)
       if (goingToNonEditable) {
         syncFromActiveEditorIfNeeded();
       }

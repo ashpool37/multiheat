@@ -1,14 +1,11 @@
 /**
- * CSV helpers.
+ * Утилиты CSV.
  *
- * Notes:
- * - `parseCsv` is a minimal RFC4180-ish parser with proper quote handling,
- *   intended to accept CSV exported by Excel/LibreOffice.
- * - It trims cells (matches previous frontend behavior).
+ * `parseCsv(text)` возвращает массив строк; все ячейки нормализуются через `trim()`.
  */
 
 /**
- * Join cells into a single CSV line with escaping.
+ * `csvJoin(cells)` → строка CSV (с экранированием при необходимости).
  * @param {Array<unknown>} cells
  * @returns {string}
  */
@@ -22,12 +19,8 @@ export const csvJoin = (cells) => {
 };
 
 /**
- * Parse CSV text into rows and trimmed string cells.
- * Supports:
- * - quoted cells with escaped quotes ("")
- * - commas as separators
- * - CRLF/CR/LF newlines
- *
+ * `parseCsv(text)` → `string[][]`.
+ * Поддерживает кавычки и экранирование `""`, разделитель `,`, переводы строк CRLF/CR/LF.
  * @param {string} text
  * @returns {string[][]}
  */

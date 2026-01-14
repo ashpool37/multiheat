@@ -1,8 +1,7 @@
 import { fmtNum } from "../util/number.js";
 
 /**
- * Render a simple table (thead + tbody) into `tableEl`.
- * Matches the previous implementation from `main.js` (DOM structure + textContent).
+ * `renderTable(tableEl, headers, rows)` — перерисовать таблицу.
  *
  * @param {HTMLTableElement} tableEl
  * @param {string[]} headers
@@ -35,11 +34,10 @@ export const renderTable = (tableEl, headers, rows) => {
 };
 
 /**
- * Render both streams and exchangers tables.
- * Expects `ui.tables.streamsTable` and `ui.tables.exchangersTable`.
+ * `renderTables(state, ui)` — отрисовать таблицы потоков и теплообменников.
  *
- * @param {any} state Canonical state
- * @param {any} ui UI object containing table elements
+ * @param {any} state Каноническое состояние
+ * @param {any} ui Ссылки на элементы таблиц (`ui.tables.streamsTable`, `ui.tables.exchangersTable`)
  */
 export const renderTables = (state, ui) => {
   const streamHeaders = [

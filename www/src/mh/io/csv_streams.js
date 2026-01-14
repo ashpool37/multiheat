@@ -7,8 +7,7 @@ import {
 } from "../util/number.js";
 
 /**
- * Emit streams CSV in the UI's Excel/LibreOffice-friendly format.
- * Behavior matches the previous monolithic implementation.
+ * `emitCsvStreams(state)` → CSV (потоки) в табличном формате для Excel/LibreOffice.
  *
  * @param {{ hot: any[], cold: any[] }} state
  * @returns {string}
@@ -74,8 +73,7 @@ export const emitCsvStreams = (state) => {
 };
 
 /**
- * Parse streams CSV into a partial canonical state: `{ hot, cold }`.
- * Throws on invalid input (matches previous behavior).
+ * `parseCsvStreamsToStatePartial(text)` → частичное каноническое состояние `{ hot, cold }`.
  *
  * @param {string} text
  * @returns {{ hot: any[], cold: any[] }}
@@ -86,7 +84,7 @@ export const parseCsvStreamsToStatePartial = (text) => {
   if (headerIdx < 0)
     throw new Error("CSV (потоки): не найдена строка заголовков.");
 
-  let mode = null; // "hot" | "cold"
+  let mode = null; // режим секции: "hot" | "cold"
   const hot = [];
   const cold = [];
 

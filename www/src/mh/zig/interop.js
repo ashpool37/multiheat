@@ -1,8 +1,7 @@
 import { toErrorText } from "../util/errors.js";
 
 /**
- * Map Zig-side error strings into a user-facing Russian message.
- * Keeps behavior identical to the original `main.js`.
+ * `describeZigError(e)` → краткое сообщение для интерфейса по тексту ошибки из Zig.
  *
  * @param {unknown} e
  * @returns {string}
@@ -18,13 +17,12 @@ export const describeZigError = (e) => {
 };
 
 /**
- * Build a zigar-backed `HeatSystem` from canonical frontend state.
- * Keeps behavior and defaults identical to the original `main.js`.
+ * `buildZigSystem(multiheat, state, includeExchangers)` → объект `HeatSystem` для вызова `solve/verifySolution`.
  *
- * @param {any} multiheat Imported zigar module (`../zig/multiheat_entry.zig`)
- * @param {any} state Canonical state ({ hot, cold, exchanger })
- * @param {boolean} includeExchangers Whether to include `state.exchanger` in the system
- * @returns {any} HeatSystem instance
+ * @param {any} multiheat Импортированный zigar-модуль (`../zig/multiheat_entry.zig`)
+ * @param {any} state Каноническое состояние ({ hot, cold, exchanger })
+ * @param {boolean} includeExchangers Включать ли `state.exchanger` в `system.exchangers`
+ * @returns {any} Экземпляр `HeatSystem`
  */
 export const buildZigSystem = (multiheat, state, includeExchangers) => {
   const HeatStream = multiheat.HeatStream;
@@ -90,8 +88,7 @@ export const buildZigSystem = (multiheat, state, includeExchangers) => {
 };
 
 /**
- * Extract optional values coming from zigar bindings.
- * Keeps behavior identical to the original `main.js`.
+ * `getOptionalValue(v)` → значение optional-поля из zigar (или `null`).
  *
  * @param {any} v
  * @returns {any}
@@ -103,9 +100,8 @@ export const getOptionalValue = (v) => {
 };
 
 /**
- * Normalize `system.exchangers` from zigar into a plain JS array of exchanger objects.
- * Handles arrays, iterables, array-likes, and single objects.
- * Keeps behavior identical to the original `main.js`.
+ * `dumpExchangersFromZig(xs)` → массив теплообменников из `system.exchangers`.
+ * Поддерживает массивы, итерируемые объекты, array-like и одиночный объект.
  *
  * @param {any} xs
  * @returns {any[]}
@@ -128,8 +124,7 @@ export const dumpExchangersFromZig = (xs) => {
 };
 
 /**
- * Convert a list of zigar `HeatExchanger` objects to canonical state exchangers.
- * Keeps behavior identical to the original `main.js`.
+ * `zigExchangersToState(zigExList)` → список `exchanger` в формате канонического состояния.
  *
  * @param {any[]} zigExList
  * @returns {{hot: number|null, cold: number|null, load: number}[]}

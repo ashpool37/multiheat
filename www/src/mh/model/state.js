@@ -1,4 +1,4 @@
-// Canonical state normalization/validation (no redundancy; config-like semantics)
+// Нормализация и валидация канонического состояния (без избыточности).
 
 import {
   isFiniteNonNegative,
@@ -6,8 +6,12 @@ import {
   parseNumber,
 } from "../util/number.js";
 
-// --- Canonical state (no redundancy, similar to config TOML) ---
+// --- Каноническое состояние (семантика, близкая к конфигурационному TOML) ---
 
+/**
+ * `defaultState()` → пустое каноническое состояние системы.
+ * @returns {{ multiheat: { version: string, temp_unit: string }, hot: any[], cold: any[], exchanger: any[] }}
+ */
 export const defaultState = () => ({
   multiheat: { version: "0.0.1", temp_unit: "K" },
   hot: [],
@@ -15,6 +19,11 @@ export const defaultState = () => ({
   exchanger: [],
 });
 
+/**
+ * `normalizeStream(s)` → каноническая запись потока.
+ * @param {any} s
+ * @returns {{ in: number, load: number } | { in: number, out: number, rate: number } | { in: number, out: number, load: number }}
+ */
 export const normalizeStream = (s) => {
   const inT = parseNumber(s.in, "in");
   if (!isFiniteNonNegative(inT)) throw new Error("Некорректное значение in.");
@@ -53,6 +62,11 @@ export const normalizeStream = (s) => {
   );
 };
 
+/**
+ * `normalizeExchanger(ex)` → каноническая запись теплообменника.
+ * @param {any} ex
+ * @returns {{ hot: number|null, cold: number|null, load: number }}
+ */
 export const normalizeExchanger = (ex) => {
   const hot =
     ex.hot === undefined ? null : parseNumber(ex.hot, "exchanger.hot");
@@ -72,6 +86,12 @@ export const normalizeExchanger = (ex) => {
   return { hot, cold, load };
 };
 
+/**
+ * `validateAndNormalizeState(state)` → нормализованное каноническое состояние.
+ * Выбрасывает исключение при некорректной структуре/значениях.
+ * @param {any} state
+ * @returns {{ multiheat: { version: string, temp_unit: string }, hot: any[], cold: any[], exchanger: any[] }}
+ */
 export const validateAndNormalizeState = (state) => {
   if (!state || typeof state !== "object")
     throw new Error("Некорректная структура данных.");

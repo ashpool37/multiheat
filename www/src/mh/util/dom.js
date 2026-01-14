@@ -1,12 +1,9 @@
 /**
- * DOM query helpers.
- *
- * The frontend uses these helpers to keep DOM access consistent and fail-fast
- * when required UI elements are missing.
+ * Утилиты поиска элементов DOM.
  */
 
 /**
- * Query a single element. Throws if not found.
+ * `$(sel, root)` → `Element`. Если элемент не найден — выбрасывает исключение.
  * @param {string} sel
  * @param {ParentNode} [root=document]
  * @returns {Element}
@@ -18,7 +15,7 @@ export const $ = (sel, root = document) => {
 };
 
 /**
- * Query a single element. Returns null if not found.
+ * `$maybe(sel, root)` → `Element|null`.
  * @param {string} sel
  * @param {ParentNode} [root=document]
  * @returns {Element|null}
@@ -26,7 +23,7 @@ export const $ = (sel, root = document) => {
 export const $maybe = (sel, root = document) => root.querySelector(sel);
 
 /**
- * Query all elements (static list).
+ * `$$(sel, root)` → `Element[]` (статический список).
  * @param {string} sel
  * @param {ParentNode} [root=document]
  * @returns {Element[]}
@@ -35,7 +32,7 @@ export const $$ = (sel, root = document) =>
   Array.from(root.querySelectorAll(sel));
 
 /**
- * Get element by id. Throws if not found.
+ * `byId(id)` → `HTMLElement`. Если элемент не найден — выбрасывает исключение.
  * @param {string} id
  * @returns {HTMLElement}
  */

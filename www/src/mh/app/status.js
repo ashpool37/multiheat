@@ -1,8 +1,5 @@
 /**
- * Status line helper.
- *
- * This module centralizes status formatting (✅/⚠️/❌) and updating the UI.
- * Behavior matches the original monolithic implementation in `main.js`.
+ * Строка статуса (✅/⚠️/❌) и функция её обновления.
  */
 
 /** @readonly */
@@ -13,20 +10,15 @@ export const StatusPrefix = {
 };
 
 /**
- * Create a status setter bound to a DOM element.
+ * Создаёт интерфейс обновления строки статуса.
  *
  * @param {object} deps
- * @param {HTMLElement} deps.statusEl Element that displays the status line text
+ * @param {HTMLElement} deps.statusEl Элемент, в который записывается строка статуса
+ * @returns {{ setStatus: (kind: "ok"|"warn"|"err"|string, message: string) => void }}
  */
 export const createStatus = ({ statusEl }) => {
-  if (!statusEl) throw new Error("statusEl is required");
+  if (!statusEl) throw new Error("Не задан statusEl.");
 
-  /**
-   * Set the status line text.
-   *
-   * @param {"ok"|"warn"|"err"|string} kind
-   * @param {string} message
-   */
   const setStatus = (kind, message) => {
     const prefix = StatusPrefix[kind] ?? StatusPrefix.err;
     statusEl.textContent = `${prefix} ${message}`;

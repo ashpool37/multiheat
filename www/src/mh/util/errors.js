@@ -1,10 +1,9 @@
 /**
- * Error helpers shared across the UI.
+ * Утилиты для обработки ошибок в UI.
  */
 
 /**
- * Convert unknown thrown values into a readable message.
- * Mirrors the previous behavior from `main.js`.
+ * `toErrorText(e)` → `string`.
  * @param {unknown} e
  * @returns {string}
  */
@@ -14,8 +13,7 @@ export const toErrorText = (e) => {
 };
 
 /**
- * Detect "user cancelled" errors from the File System Access API.
- * Mirrors the previous behavior from `main.js`.
+ * `isAbortError(e)` → `boolean` (отмена пользователем в File System Access API).
  * @param {unknown} e
  * @returns {boolean}
  */
@@ -23,7 +21,7 @@ export const isAbortError = (e) =>
   typeof e === "object" && e !== null && "name" in e && e.name === "AbortError";
 
 /**
- * Console logging helper with consistent prefixing.
+ * `logError(context, e)` → `void`.
  * @param {string} context
  * @param {unknown} e
  */

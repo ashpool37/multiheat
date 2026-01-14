@@ -31,17 +31,7 @@ import { renderDescriptionHtml } from "../render/description.js";
 import { renderTables } from "../render/tables.js";
 
 /**
- * Main application module.
- *
- * This file wires:
- * - UI references
- * - canonical state store (+ dirty flags)
- * - views coordinator (emitters + renderers)
- * - tab switching logic ("Hide" mode suspends view updates)
- * - file upload/download flows (TOML / CSV streams / CSV solution)
- * - Zig WASM interop (solve / verifySolution)
- *
- * Goal: preserve exact behavior and performance from the previous monolithic `src/main.js`.
+ * Основной модуль приложения: связывает UI, состояние, представления и Zig/WASM.
  */
 
 const setupToggle = (selector) => {
@@ -171,7 +161,7 @@ const setupDropdownMenus = (ui) => {
     toggleMenu(saveBtn, saveMenu);
   });
 
-  // Why: clicking outside closes dropdowns
+  // Почему: клик вне меню закрывает выпадающие списки
   document.addEventListener("click", (e) => {
     const t = e.target;
     if (!openMenu.hidden && !openMenu.contains(t) && !openBtn.contains(t))
@@ -263,6 +253,10 @@ const hasAnyUserData = ({ store, ui }) => {
   return false;
 };
 
+/**
+ * `startApp()` запускает интерфейс и подключает модуль вычислений Zig/WASM.
+ * @returns {Promise<{ ui: any, store: any, multiheat: any | null }>}
+ */
 export const startApp = async () => {
   const ui = buildUiRefs(document);
   const store = createStore({ activeTab: Tab.toml });
@@ -295,11 +289,11 @@ export const startApp = async () => {
     setStatus,
   });
 
-  // --- Event wiring (non-WASM dependent) ---
+  // --- Привязка событий (без WASM) ---
 
   setUiEnabled(ui, false);
 
-  // Dirty flags
+  // Флаги dirty редакторов
   ui.toml.textarea.addEventListener("input", () => {
     store.dirty.toml = true;
   });
@@ -310,11 +304,11 @@ export const startApp = async () => {
     store.dirty.csvSolution = true;
   });
 
-  // Tabs
+  // Вкладки
   tabs.hookTabEvents();
   tabs.setActiveTab(Tab.toml);
 
-  // Open menu -> file input clicks
+  // «Открыть»: пункты меню → выбор файла
   ui.buttons.openToml.addEventListener("click", () => ui.inputs.toml.click());
   ui.buttons.openCsvStreams.addEventListener("click", () =>
     ui.inputs.csvStreams.click(),
@@ -323,7 +317,7 @@ export const startApp = async () => {
     ui.inputs.csvSolution.click(),
   );
 
-  // Upload handlers
+  // Обработчики загрузки файлов
   const onUploadToml = async (file) => {
     try {
       const text = await file.text();
@@ -370,7 +364,7 @@ export const startApp = async () => {
       ui.csv.streamsTextarea.value = text;
       store.dirty.csvStreams = true;
 
-      // Why: replacing streams invalidates previous solution
+      // Почему: при замене потоков прежнее решение теряет смысл
       ui.csv.solutionTextarea.value = "";
       store.dirty.csvSolution = false;
 
@@ -452,7 +446,7 @@ export const startApp = async () => {
     await onUploadCsvSolution(file);
   });
 
-  // Save handlers
+  // Обработчики сохранения
   ui.buttons.saveToml.addEventListener("click", async () => {
     try {
       if (store.viewsSuspended) {
@@ -531,7 +525,7 @@ export const startApp = async () => {
     }
   });
 
-  // Clear button
+  // Сброс данных
   ui.buttons.clear.addEventListener("click", () => {
     try {
       const ok = window.confirm("Сбросить все данные?");
@@ -551,7 +545,7 @@ export const startApp = async () => {
     }
   });
 
-  // beforeunload protection
+  // Защита от случайного закрытия вкладки
   window.addEventListener("beforeunload", (e) => {
     if (!hasAnyUserData({ store, ui })) return;
     e.preventDefault();
@@ -559,16 +553,16 @@ export const startApp = async () => {
     return "";
   });
 
-  // Dropdown menus behavior
+  // Выпадающие меню
   setupDropdownMenus(ui);
 
-  // Initial status (matches previous behavior)
+  // Начальный статус
   setStatus(
     "ok",
     "Готов к работе. Откройте файл конфигурации или вставьте её в поле ниже.",
   );
 
-  // --- WASM / Zig integration ---
+  // --- Интеграция Zig/WASM ---
   let multiheat = null;
 
   const solveCurrent = () => {
@@ -693,7 +687,7 @@ export const startApp = async () => {
   ui.buttons.verify.addEventListener("click", verifyCurrent);
 
   try {
-    // Why: wait for WASM init before enabling the UI
+    // Почему: включаем интерфейс только после инициализации WASM
     multiheat = await import("../../../zig/multiheat_entry.zig");
 
     const ok =
@@ -714,11 +708,11 @@ export const startApp = async () => {
 
     setUiEnabled(ui, true);
 
-    // Two independent placeholder toggles (kept as-is)
+    // Два независимых переключателя-заглушки
     setupToggle("#btnVisualize");
     setupToggle("#btnTest");
 
-    // Initial empty state; user will paste/upload data
+    // Стартуем с пустого состояния: данные будут вставлены/загружены пользователем
     store.state = defaultState();
     views.refreshAllViews(true);
 
@@ -727,7 +721,7 @@ export const startApp = async () => {
       "Готов к работе. Откройте файл конфигурации или вставьте её в поле ниже.",
     );
 
-    // Test mode behavior (shows placeholder + defaults to Hide)
+    // Режим тестирования: показывает заглушку и по умолчанию переключает на «Скрыть»
     setupTestMode({ ui, switchTab: tabs.switchTab });
 
     return { ui, store, multiheat };
