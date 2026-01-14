@@ -144,6 +144,41 @@ button.secondary:hover {
     color: #ffffff;
 }
 
+/* Группировка кнопок и разделитель */
+.mh-actionBar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.mh-actionGroup {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.mh-actionSep {
+    color: #94a3b8;
+    user-select: none;
+    padding: 0 6px;
+}
+
+/* Кнопки-переключатели (независимые, как табы по стилю) */
+.mh-toggle[aria-pressed="true"],
+.mh-toggle.is-active {
+    border-color: #2563eb;
+    background-color: #2563eb;
+    color: #ffffff;
+}
+
+.mh-toggle[aria-pressed="true"]:hover,
+.mh-toggle.is-active:hover {
+    border-color: #1d4ed8;
+    background-color: #1d4ed8;
+}
+
 /* Статус */
 #statusLabel,
 .mh-status {

@@ -1387,6 +1387,23 @@ const init = async () => {
 
     setUiEnabled(true);
 
+    // Почему: два независимых переключателя-заглушки (без логики) для будущих режимов
+    const setupToggle = (selector) => {
+      const btn = document.querySelector(selector);
+      if (!btn) return;
+
+      btn.classList.add("mh-toggle");
+      btn.setAttribute("aria-pressed", "false");
+
+      btn.addEventListener("click", () => {
+        const active = btn.getAttribute("aria-pressed") !== "true";
+        btn.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+    };
+
+    setupToggle("#btnVisualize");
+    setupToggle("#btnTest");
+
     // Почему: начальное состояние пустое; пользователь вставит/загрузит данные
     store.state = defaultState();
     refreshAllViews(true);
