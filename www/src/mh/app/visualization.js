@@ -133,13 +133,15 @@ const redraw = (ui, store, opts = {}) => {
   let requiredH = 0;
   if (n > 0) {
     const padTop = 24;
-    const padBottom = 36; // + место под подписи нагрузок
+    const padBottom = 44; // + место под двухстрочные подписи нагрузок
     const rowStep = 28;
 
-    // Промежуток между группами горячих и холодных потоков должен быть больше обычного шага.
-    const groupGap = hotN > 0 && coldN > 0 ? 40 : 0;
+    // В рендере зазор между группами (между нижним hot и верхним cold) больше обычного шага.
+    // Здесь важно добавить только «добавку» сверх уже учтённого шага (rowStep), иначе будет двойной учёт.
+    // В render/visualization.js: groupGap = gap + 22, при gap == rowStep == 28 => extra = 22.
+    const groupGapExtra = hotN > 0 && coldN > 0 ? 22 : 0;
 
-    requiredH = padTop + padBottom + (n - 1) * rowStep + groupGap;
+    requiredH = padTop + padBottom + (n - 1) * rowStep + groupGapExtra;
   }
 
   // Если требуемая высота не превышает CSS-дефолт — убираем inline height.
@@ -154,6 +156,54 @@ const redraw = (ui, store, opts = {}) => {
         canvas.dataset.mhVizHeightPx = String(hPx);
       }
     }
+  }
+
+  // При наличии ячеек удерживаем постоянный шаг по X, расширяя canvas по ширине (min-width),
+  // чтобы расстояния между ячейками не сжимались, а появлялась горизонтальная прокрутка.
+  const exch = Array.isArray(state?.exchanger) ? state.exchanger : [];
+  const cellCount = exch.filter(
+    (ex) =>
+      ex &&
+      ex.hot !== null &&
+      ex.hot !== undefined &&
+      ex.cold !== null &&
+      ex.cold !== undefined,
+  ).length;
+
+  const curW = canvas.getBoundingClientRect().width;
+
+  if (cellCount > 0 && Number.isFinite(curW) && curW > 0) {
+    // Эти константы должны соответствовать геометрии рендера.
+    const PAD = 12;
+    const LEFT_GUTTER = 82;
+    const RIGHT_GUTTER = 110;
+    const MIN_SPAN = 40;
+
+    const DX_CELL = 90; // постоянный шаг между ячейками
+    const UTIL_INSET = 18; // отступ до вертикали утилит от конца линий
+    const CELL_LEFT_MARGIN = 24; // небольшой воздух до первой ячейки
+
+    const requiredSpan =
+      UTIL_INSET + CELL_LEFT_MARGIN + DX_CELL * Math.max(1, cellCount);
+
+    const requiredMinWidth =
+      PAD * 2 + LEFT_GUTTER + RIGHT_GUTTER + Math.max(MIN_SPAN, requiredSpan);
+
+    const targetMinW = Math.ceil(requiredMinWidth);
+    const prevMinW = Number(canvas.dataset.mhVizMinWidthPx || "0");
+
+    if (targetMinW > curW + 1) {
+      if (prevMinW !== targetMinW) {
+        canvas.style.minWidth = `${targetMinW}px`;
+        canvas.dataset.mhVizMinWidthPx = String(targetMinW);
+      }
+    } else {
+      if (canvas.style.minWidth) canvas.style.minWidth = "";
+      canvas.dataset.mhVizMinWidthPx = "0";
+    }
+  } else {
+    if (canvas.style.minWidth) canvas.style.minWidth = "";
+    canvas.dataset.mhVizMinWidthPx = "0";
   }
 
   const r = canvas.getBoundingClientRect();

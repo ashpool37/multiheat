@@ -25,7 +25,45 @@ const isStreamIsothermal = (s) => s && (s.out === undefined || s.out === null);
 
 const fmtTempK = (t) => `${fmtNum(t)} K`;
 
-const fmtLoadMw = (q) => `${fmtNum(q)} МВт`;
+// --- Форматирование нагрузок ---
+//
+// Требования:
+// - 2 значащие цифры
+// - экспонента, если есть >= 2 ведущих нуля после точки (|x| < 0.01)
+// - убрать ведущий ноль у дробей: ".12", "-.12"
+// - для ячеек: значение отдельно, "МВт" отдельной строкой в рамке
+// - для утилит: одна строка (без переноса), но те же правила округления/экспоненты/ведущего нуля
+
+const dropLeadingZero = (s) => s.replace(/^(-?)0\./, "$1.");
+
+const fmtSig2 = (v) => {
+  const x = Number(v);
+  if (!Number.isFinite(x)) return String(v);
+
+  const ax = Math.abs(x);
+  // Экспонента при >= 2 ведущих нуля после точки: 0.00xx...
+  if (ax > 0 && ax < 0.01) {
+    // 2 значащие цифры => одна цифра после точки
+    const s = x.toExponential(1).replace(/e\+/, "e");
+    return s;
+  }
+
+  // Обычная запись с 2 значащими цифрами
+  let s = x.toPrecision(2);
+
+  // toPrecision может дать экспоненту на очень больших числах — это допустимо.
+  // Для обычных дробей убираем ведущий ноль.
+  if (!s.includes("e") && !s.includes("E")) s = dropLeadingZero(s);
+
+  // Уберём лишние нули у десятичной формы, если они появились
+  if (!s.includes("e") && !s.includes("E")) s = s.replace(/\.?0+$/, "");
+
+  return s;
+};
+
+const fmtLoadValue = (q) => fmtSig2(q);
+
+const fmtUtilityLabel = (q) => `${fmtSig2(q)} МВт`;
 
 /**
  * Получить CSS-размер canvas без вмешательства в layout.
@@ -123,6 +161,48 @@ const drawLabelBox = (ctx, text, x, y, opts = {}) => {
   ctx.fillText(text, x, y);
 };
 
+const drawLoadBox = (ctx, valueText, unitText, x, y, opts = {}) => {
+  const {
+    boxFill = "#dbeafe",
+    boxStroke = "rgba(15,23,42,0.8)",
+    boxStrokeWidth = 1,
+    textFill = "#0f172a",
+    padX = 7,
+    padY = 5,
+    lineGap = 2,
+  } = opts;
+
+  const line1 = String(valueText);
+  const line2 = String(unitText);
+
+  const m1 = ctx.measureText(line1);
+  const m2 = ctx.measureText(line2);
+
+  const textW = Math.max(m1.width, m2.width);
+  const lineH = 14;
+  const boxW = Math.ceil(textW + padX * 2);
+  const boxH = Math.ceil(lineH * 2 + lineGap + padY * 2);
+
+  const rx = Math.floor(x - boxW / 2);
+  const ry = Math.floor(y - boxH / 2);
+
+  ctx.fillStyle = boxFill;
+  ctx.fillRect(rx, ry, boxW, boxH);
+
+  ctx.strokeStyle = boxStroke;
+  ctx.lineWidth = boxStrokeWidth;
+  ctx.strokeRect(rx + 0.5, ry + 0.5, boxW - 1, boxH - 1);
+
+  ctx.fillStyle = textFill;
+  ctx.textAlign = "center";
+
+  const y1 = ry + padY + lineH / 2;
+  const y2 = ry + padY + lineH + lineGap + lineH / 2;
+
+  ctx.fillText(line1, x, y1);
+  ctx.fillText(line2, x, y2);
+};
+
 const drawLine = (ctx, x0, y0, x1, y1, opts = {}) => {
   const { strokeStyle = "#0f172a", lineWidth = 2, lineCap = "round" } = opts;
 
@@ -155,37 +235,36 @@ const drawDot = (ctx, x, y, r, opts = {}) => {
   }
 };
 
-const computeLayout = ({ wCss }) => {
+const computeLayout = ({ wCss, hasExchangers }) => {
   const pad = 12;
 
-  // Делаем поля уже: подписи слева и справа должны быть «близко» к линии,
-  // примерно как справа (xTempR = x1 + 10).
-  let leftGutter = 96;
-  let rightGutter = 118;
+  // Когда появляются ячейки, нам нужен больший «рабочий» горизонтальный диапазон.
+  // Поэтому делаем поля ещё чуть уже (линии растут влево/вправо в пределах canvas),
+  // а сам canvas при необходимости расширяем через minWidth (см. ниже).
+  let leftGutter = hasExchangers ? 82 : 96;
+  let rightGutter = hasExchangers ? 110 : 118;
 
-  // Минимальная длина линий: уменьшаем, чтобы простые схемы (без аппаратов)
-  // не выглядели «слишком растянутыми» в split-режиме.
+  // Минимальная длина линий: в простом случае (без аппаратов) должны помещаться в split-режиме.
   const minSpan = 40;
   const available = wCss - 2 * pad;
 
   if (available - leftGutter - rightGutter < minSpan) {
-    rightGutter = Math.max(90, available - leftGutter - minSpan);
+    rightGutter = Math.max(84, available - leftGutter - minSpan);
     if (available - leftGutter - rightGutter < minSpan) {
-      leftGutter = Math.max(90, available - rightGutter - minSpan);
+      leftGutter = Math.max(84, available - rightGutter - minSpan);
     }
   }
 
   const x0 = pad + leftGutter; // начало линий
   const x1 = wCss - pad - rightGutter; // конец линий
 
-  // Подписи слева размещаем рядом с линией (как справа), выравниваем вправо.
+  // Температуры слева размещаем рядом с линией, выравниваем вправо.
+  // ID потока позиционируем динамически (в drawStream), чтобы не перекрывать температуру.
   const xTempL = Math.max(pad, x0 - 10); // температура на входе
-  const xId = Math.max(pad, x0 - 34); // подпись потока (H1/C1)
 
-  // Справа оставляем как было: подпись рядом с линией.
   const xTempR = x1 + 10; // температура на выходе (или "=")
 
-  return { pad, xId, xTempL, x0, x1, xTempR };
+  return { pad, leftGutter, rightGutter, minSpan, xTempL, x0, x1, xTempR };
 };
 
 // --- Основной рендер ---
@@ -207,7 +286,16 @@ export const renderVisualization = ({ canvas, state }) => {
   // Если данных нет — оставляем аккуратную заглушку, чтобы пользователь понимал, что «оно работает».
   const hasAny = hot.length > 0 || cold.length > 0 || exch.length > 0;
 
-  // Высотой canvas управляет контроллер; здесь только рисуем текущее состояние.
+  // Ширину canvas задаёт layout/контроллер; рендерер не изменяет `min-width`.
+  // Здесь выполняем один корректный проход рендеринга без «двойной инициализации» контекста.
+  const hasExchangers = exch.some(
+    (ex) =>
+      ex &&
+      ex.hot !== null &&
+      ex.hot !== undefined &&
+      ex.cold !== null &&
+      ex.cold !== undefined,
+  );
 
   const { dpr, wCss, hCss } = resizeCanvasForDpr(canvas);
 
@@ -238,15 +326,16 @@ export const renderVisualization = ({ canvas, state }) => {
     faint: "rgba(15,23,42,0.25)",
   };
 
-  const { xId, xTempL, x0, x1, xTempR } = computeLayout({
+  const { pad, xTempL, x0, x1, xTempR } = computeLayout({
     wCss,
+    hasExchangers,
   });
 
   const top = 20;
   const bottom = 20;
   const gap = 28;
-  // Между нижним горячим и верхним холодным делаем зазор чуть больше, чем между линиями внутри группы.
-  const groupGap = hot.length > 0 && cold.length > 0 ? gap + 12 : 0;
+  // Между нижним горячим и верхним холодным делаем зазор заметно больше (нужен «коридор» под подписи нагрузок).
+  const groupGap = hot.length > 0 && cold.length > 0 ? gap + 22 : 0;
 
   /** @type {number[]} */
   const yHot = [];
@@ -288,22 +377,25 @@ export const renderVisualization = ({ canvas, state }) => {
     // Линия потока
     drawLine(ctx, x0, y, x1, y, { strokeStyle: color, lineWidth: 2.5 });
 
-    // Подпись потока слева рядом с линией
-    const id = `${isHot ? "H" : "C"}${idx0 + 1}`;
-    drawText(ctx, id, xId, y, {
-      align: "right",
-      fillStyle: color,
-      outline: true,
-    });
-
-    // Температура на входе (тоже рядом с линией)
-    if (s && typeof s.in === "number") {
-      drawText(ctx, fmtTempK(s.in), xTempL, y, {
+    // Температура на входе (рядом с линией)
+    const inText = s && typeof s.in === "number" ? fmtTempK(s.in) : "";
+    if (inText) {
+      drawText(ctx, inText, xTempL, y, {
         align: "right",
         fillStyle: colors.ink,
         outline: true,
       });
     }
+
+    // ID потока: ставим левее температуры на входе так, чтобы не перекрывались.
+    const id = `${isHot ? "H" : "C"}${idx0 + 1}`;
+    const inW = inText ? ctx.measureText(inText).width : 0;
+    const xId = Math.max(pad, xTempL - inW - 10);
+    drawText(ctx, id, xId, y, {
+      align: "right",
+      fillStyle: color,
+      outline: true,
+    });
 
     // Температура на выходе / "=" для изотермических
     const rightLabel = isStreamIsothermal(s) ? "=" : fmtTempK(s.out);
@@ -341,19 +433,15 @@ export const renderVisualization = ({ canvas, state }) => {
   // Утилиты ставим на общей вертикали `xUtilLine` (внутри длины линий),
   // при этом расстояние от последней ячейки до `xUtilLine` равно расстоянию
   // между последними двумя ячейками (равномерная сетка по X).
-  const xUtilLine = x1 - 18;
+  const UTIL_INSET = 18;
+  const DX_CELL = 90; // постоянный шаг между аппаратами
 
-  const cellMinBase = x0 + 24;
-  let dxCell =
-    cells.length > 0 ? (xUtilLine - cellMinBase) / (cells.length + 1) : 0;
-  dxCell = Math.max(24, Math.floor(dxCell));
+  const xUtilLine = x1 - UTIL_INSET;
 
-  const cellMinX =
-    cells.length > 0
-      ? Math.max(x0 + 12, xUtilLine - dxCell * (cells.length + 1))
-      : x0 + 24;
-
-  const cellX = (k) => cellMinX + dxCell * (k + 1);
+  // Ячейки располагаем равномерно по X с постоянным шагом:
+  // ... , E(k-1), E(k), ..., E(last), [util]
+  // При этом расстояние от последней ячейки до util равно расстоянию между последними двумя ячейками.
+  const cellX = (k) => xUtilLine - DX_CELL * (cells.length - k);
 
   // Рисуем ячейки теплообмена: вертикальная линия + подпись нагрузки.
   for (let k = 0; k < cells.length; k++) {
@@ -388,16 +476,22 @@ export const renderVisualization = ({ canvas, state }) => {
       lineWidth: 1,
     });
 
-    // Подпись нагрузки: без "Q=", в рамке, по центру между соединяемыми линиями.
-    const qText = fmtLoadMw(ex.load);
-    const yMid = (y0c + y1c) / 2;
+    // Подпись нагрузки:
+    // - 2 значащие цифры
+    // - значение и единица измерения на разных строках в рамке
+    // - центрируем в «коридоре» между нижним горячим и верхним холодным (если обе группы есть)
+    const vText = fmtLoadValue(ex.load);
 
-    drawLabelBox(ctx, qText, x, yMid, {
-      align: "center",
-      textFill: colors.ink,
+    const yBand =
+      hot.length > 0 && cold.length > 0
+        ? (yHot[yHot.length - 1] + yCold[0]) / 2
+        : (y0c + y1c) / 2;
+
+    drawLoadBox(ctx, vText, "МВт", x, yBand, {
       boxFill: "#dbeafe",
       boxStroke: "rgba(15,23,42,0.8)",
       boxStrokeWidth: 1,
+      textFill: colors.ink,
     });
   }
 
@@ -426,8 +520,10 @@ export const renderVisualization = ({ canvas, state }) => {
       lineWidth: 2,
     });
 
-    // Подпись нагрузки: без "Q=", в рамке, сверху-справа от точки.
-    const qText = fmtLoadMw(ex.load);
+    // Подпись нагрузки утилиты:
+    // - одна строка (без переноса)
+    // - 2 значащие цифры, экспонента при необходимости, без ведущего нуля у дроби
+    const qText = fmtUtilityLabel(ex.load);
     drawLabelBox(ctx, qText, xDot + 12, y - 14, {
       align: "left",
       textFill: colors.ink,
