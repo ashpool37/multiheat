@@ -25,7 +25,7 @@ const isStreamIsothermal = (s) => s && (s.out === undefined || s.out === null);
 
 const fmtTempK = (t) => `${fmtNum(t)} K`;
 
-const fmtLoadMw = (q) => `Q=${fmtNum(q)} МВт`;
+const fmtLoadMw = (q) => `${fmtNum(q)} МВт`;
 
 /**
  * Получить CSS-размер canvas без вмешательства в layout.
@@ -86,6 +86,43 @@ const drawText = (ctx, text, x, y, opts = {}) => {
   ctx.fillText(text, x, y);
 };
 
+const drawLabelBox = (ctx, text, x, y, opts = {}) => {
+  const {
+    align = "center",
+    textFill = "#0f172a",
+    boxFill = "#e2e8f0",
+    boxStroke = "#0f172a",
+    boxStrokeWidth = 1,
+    padX = 6,
+    padY = 3,
+  } = opts;
+
+  ctx.textAlign = align;
+
+  const m = ctx.measureText(text);
+  const textW = m.width;
+  const textH = 14;
+
+  let x0 = x;
+  if (align === "center") x0 = x - textW / 2;
+  if (align === "right") x0 = x - textW;
+
+  const rx = Math.floor(x0 - padX);
+  const ry = Math.floor(y - textH / 2 - padY);
+  const rw = Math.ceil(textW + padX * 2);
+  const rh = Math.ceil(textH + padY * 2);
+
+  ctx.fillStyle = boxFill;
+  ctx.fillRect(rx, ry, rw, rh);
+
+  ctx.strokeStyle = boxStroke;
+  ctx.lineWidth = boxStrokeWidth;
+  ctx.strokeRect(rx + 0.5, ry + 0.5, rw - 1, rh - 1);
+
+  ctx.fillStyle = textFill;
+  ctx.fillText(text, x, y);
+};
+
 const drawLine = (ctx, x0, y0, x1, y1, opts = {}) => {
   const { strokeStyle = "#0f172a", lineWidth = 2, lineCap = "round" } = opts;
 
@@ -121,47 +158,34 @@ const drawDot = (ctx, x, y, r, opts = {}) => {
 const computeLayout = ({ wCss }) => {
   const pad = 12;
 
-  // Левый гаттер под H1/C1 + температуру на входе.
-  // Правый гаттер под температуру на выходе + утилиты + подпись нагрузки.
-  let leftGutter = 140;
-  let rightGutter = 180;
+  // Делаем поля уже: подписи слева и справа должны быть «близко» к линии,
+  // примерно как справа (xTempR = x1 + 10).
+  let leftGutter = 96;
+  let rightGutter = 118;
 
-  // Гарантируем минимальную «рабочую» ширину для рисования линий.
-  const minSpan = 120;
+  // Минимальная длина линий: уменьшаем, чтобы простые схемы (без аппаратов)
+  // не выглядели «слишком растянутыми» в split-режиме.
+  const minSpan = 40;
   const available = wCss - 2 * pad;
 
   if (available - leftGutter - rightGutter < minSpan) {
-    // Сначала ужимаем правую часть.
-    rightGutter = Math.max(110, available - leftGutter - minSpan);
+    rightGutter = Math.max(90, available - leftGutter - minSpan);
     if (available - leftGutter - rightGutter < minSpan) {
-      // Потом левую.
-      leftGutter = Math.max(110, available - rightGutter - minSpan);
+      leftGutter = Math.max(90, available - rightGutter - minSpan);
     }
   }
 
-  const xId = pad; // подпись потока (H1/C1)
-  const xTempL = pad + 34; // температура на входе
   const x0 = pad + leftGutter; // начало линий
-  const x1 = wCss - pad - rightGutter; // конец линий (до правых подписей/утилит)
+  const x1 = wCss - pad - rightGutter; // конец линий
+
+  // Подписи слева размещаем рядом с линией (как справа), выравниваем вправо.
+  const xTempL = Math.max(pad, x0 - 10); // температура на входе
+  const xId = Math.max(pad, x0 - 34); // подпись потока (H1/C1)
+
+  // Справа оставляем как было: подпись рядом с линией.
   const xTempR = x1 + 10; // температура на выходе (или "=")
 
-  // Зона утилит внутри правого гаттера.
-  const xUtilBase =
-    x1 + clamp(36, Math.floor(rightGutter * 0.42), rightGutter - 60);
-  const xUtilMax = wCss - pad - 10;
-
-  return {
-    pad,
-    leftGutter,
-    rightGutter,
-    xId,
-    xTempL,
-    x0,
-    x1,
-    xTempR,
-    xUtilBase,
-    xUtilMax,
-  };
+  return { pad, xId, xTempL, x0, x1, xTempR };
 };
 
 // --- Основной рендер ---
@@ -214,14 +238,15 @@ export const renderVisualization = ({ canvas, state }) => {
     faint: "rgba(15,23,42,0.25)",
   };
 
-  const { xId, xTempL, x0, x1, xTempR, xUtilBase, xUtilMax } = computeLayout({
+  const { xId, xTempL, x0, x1, xTempR } = computeLayout({
     wCss,
   });
 
   const top = 20;
   const bottom = 20;
   const gap = 28;
-  const groupGap = hot.length > 0 && cold.length > 0 ? 18 : 0;
+  // Между нижним горячим и верхним холодным делаем зазор чуть больше, чем между линиями внутри группы.
+  const groupGap = hot.length > 0 && cold.length > 0 ? gap + 12 : 0;
 
   /** @type {number[]} */
   const yHot = [];
@@ -263,18 +288,18 @@ export const renderVisualization = ({ canvas, state }) => {
     // Линия потока
     drawLine(ctx, x0, y, x1, y, { strokeStyle: color, lineWidth: 2.5 });
 
-    // Подпись потока слева (на «поле»)
+    // Подпись потока слева рядом с линией
     const id = `${isHot ? "H" : "C"}${idx0 + 1}`;
     drawText(ctx, id, xId, y, {
-      align: "left",
+      align: "right",
       fillStyle: color,
       outline: true,
     });
 
-    // Температура на входе
+    // Температура на входе (тоже рядом с линией)
     if (s && typeof s.in === "number") {
       drawText(ctx, fmtTempK(s.in), xTempL, y, {
-        align: "left",
+        align: "right",
         fillStyle: colors.ink,
         outline: true,
       });
@@ -311,15 +336,24 @@ export const renderVisualization = ({ canvas, state }) => {
     // else: валидация не должна допускать, но молча игнорируем
   }
 
-  // Позиции по X для «ячееек теплообмена».
-  const cellMinX = x0 + 40;
-  const cellMaxX = x1 - 40;
-  const span = Math.max(1, cellMaxX - cellMinX);
+  // Позиции по X для «ячеек теплообмена» и утилит.
+  //
+  // Утилиты ставим на общей вертикали `xUtilLine` (внутри длины линий),
+  // при этом расстояние от последней ячейки до `xUtilLine` равно расстоянию
+  // между последними двумя ячейками (равномерная сетка по X).
+  const xUtilLine = x1 - 18;
 
-  const cellX = (k) => {
-    if (cells.length === 1) return cellMinX + span * 0.5;
-    return cellMinX + (span * (k + 1)) / (cells.length + 1);
-  };
+  const cellMinBase = x0 + 24;
+  let dxCell =
+    cells.length > 0 ? (xUtilLine - cellMinBase) / (cells.length + 1) : 0;
+  dxCell = Math.max(24, Math.floor(dxCell));
+
+  const cellMinX =
+    cells.length > 0
+      ? Math.max(x0 + 12, xUtilLine - dxCell * (cells.length + 1))
+      : x0 + 24;
+
+  const cellX = (k) => cellMinX + dxCell * (k + 1);
 
   // Рисуем ячейки теплообмена: вертикальная линия + подпись нагрузки.
   for (let k = 0; k < cells.length; k++) {
@@ -354,30 +388,21 @@ export const renderVisualization = ({ canvas, state }) => {
       lineWidth: 1,
     });
 
-    // Подпись нагрузки
+    // Подпись нагрузки: без "Q=", в рамке, по центру между соединяемыми линиями.
     const qText = fmtLoadMw(ex.load);
     const yMid = (y0c + y1c) / 2;
 
-    // Пытаемся разместить справа от линии, иначе — слева.
-    const rightX = x + 8;
-    const leftX = x - 8;
-
-    const m = ctx.measureText(qText);
-    const fitsRight = rightX + m.width < wCss - 10;
-
-    drawText(ctx, qText, fitsRight ? rightX : leftX, yMid, {
-      align: fitsRight ? "left" : "right",
-      fillStyle: colors.ink,
-      outline: true,
+    drawLabelBox(ctx, qText, x, yMid, {
+      align: "center",
+      textFill: colors.ink,
+      boxFill: "#dbeafe",
+      boxStroke: "rgba(15,23,42,0.8)",
+      boxStrokeWidth: 1,
     });
   }
 
-  // Утилиты: точки на соответствующих потоках.
-  // Если утилит на одной линии несколько — сдвигаем точки вправо (в пределах правого гаттера).
-  /** @type {Map<number, number>} */
-  const utilCountByHot = new Map();
-  /** @type {Map<number, number>} */
-  const utilCountByCold = new Map();
+  // Утилиты (холодильники/нагреватели): точки на общей вертикали `xUtilLine`.
+  // Важно: линии потоков уже имеют одинаковую длину (до `x1`), поэтому ничего не «удлиняем» под утилиты.
 
   const drawUtility = ({ kind, ex }) => {
     const isCooler = kind === "cooler";
@@ -391,21 +416,9 @@ export const renderVisualization = ({ canvas, state }) => {
 
     const y = yArr[idx];
 
-    const map = isCooler ? utilCountByHot : utilCountByCold;
-    const used = map.get(idx) ?? 0;
-    map.set(idx, used + 1);
+    // Точка на общей вертикали (линии потоков уже доходят до x1, не удлиняем отдельно).
+    const xDot = xUtilLine;
 
-    const step = 18;
-    const xDot = clamp(xUtilBase + used * step, x1 + 26, xUtilMax);
-
-    // Лёгкое продолжение линии до точки
-    const streamColor = isCooler ? colors.hot : colors.cold;
-    drawLine(ctx, x1, y, xDot - 9, y, {
-      strokeStyle: streamColor,
-      lineWidth: 2.5,
-    });
-
-    // Точка
     const dotColor = isCooler ? colors.cold : colors.hot;
     drawDot(ctx, xDot, y, 7, {
       fillStyle: dotColor,
@@ -413,33 +426,19 @@ export const renderVisualization = ({ canvas, state }) => {
       lineWidth: 2,
     });
 
-    // Подпись нагрузки рядом с точкой
+    // Подпись нагрузки: без "Q=", в рамке, сверху-справа от точки.
     const qText = fmtLoadMw(ex.load);
-    const textX = xDot + 10;
-    const textAlign =
-      textX + ctx.measureText(qText).width < wCss - 8 ? "left" : "right";
-    const tx = textAlign === "left" ? textX : xDot - 10;
-
-    drawText(ctx, qText, tx, y - 12, {
-      align: textAlign,
-      fillStyle: colors.ink,
-      outline: true,
+    drawLabelBox(ctx, qText, xDot + 12, y - 14, {
+      align: "left",
+      textFill: colors.ink,
+      boxFill: "#e2e8f0",
+      boxStroke: "rgba(15,23,42,0.8)",
+      boxStrokeWidth: 1,
     });
   };
 
   for (const { ex } of coolers) drawUtility({ kind: "cooler", ex });
   for (const { ex } of heaters) drawUtility({ kind: "heater", ex });
-
-  // Мелкая подпись снизу (не обязательно, но полезно для понимания легенды).
-  // Это пользовательский текст, поэтому по-русски; сделаем ненавязчиво.
-  const legendY = Math.min(hCss - 12, maxY + 8);
-  drawText(
-    ctx,
-    "Горячие: красные линии (H). Холодные: синие линии (C). Ячейки: вертикали. Утилиты: точки (синий — холодильник, красный — нагреватель).",
-    x0,
-    legendY,
-    { align: "left", fillStyle: "rgba(100,116,139,0.95)", outline: false },
-  );
 };
 
 /**

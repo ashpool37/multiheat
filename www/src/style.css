@@ -219,7 +219,7 @@ button.secondary:hover {
     box-sizing: border-box;
     border-radius: 12px;
     border: 1px solid #cbd5e1;
-     background-color: #ffffff;
+    background-color: #ffffff;
     padding: 12px;
     overflow-x: auto;
     overflow-y: hidden;
@@ -229,7 +229,6 @@ button.secondary:hover {
 .mh-vizCanvas {
     display: block;
     width: 100%;
-    min-width: 720px;
     height: clamp(40vh, 447px, 70vh);
 }
 

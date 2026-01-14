@@ -133,9 +133,13 @@ const redraw = (ui, store, opts = {}) => {
   let requiredH = 0;
   if (n > 0) {
     const padTop = 24;
-    const padBottom = 36; // + место под подписи нагрузок/легенду
+    const padBottom = 36; // + место под подписи нагрузок
     const rowStep = 28;
-    requiredH = padTop + padBottom + (n - 1) * rowStep;
+
+    // Промежуток между группами горячих и холодных потоков должен быть больше обычного шага.
+    const groupGap = hotN > 0 && coldN > 0 ? 40 : 0;
+
+    requiredH = padTop + padBottom + (n - 1) * rowStep + groupGap;
   }
 
   // Если требуемая высота не превышает CSS-дефолт — убираем inline height.
