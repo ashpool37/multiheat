@@ -1,0 +1,80 @@
+import { $ } from "../util/dom.js";
+
+/**
+ * Build and return a structured set of UI element references.
+ * Throws if any required element is missing (fail-fast, same as previous `main.js`).
+ *
+ * @param {ParentNode} [root=document]
+ */
+export const buildUiRefs = (root = document) => {
+  const q = (sel) => $(sel, root);
+
+  return {
+    status: q("#statusLabel"),
+
+    buttons: {
+      openMenu: q("#btnOpenMenu"),
+      saveMenu: q("#btnSaveMenu"),
+
+      openToml: q("#menuOpenToml"),
+      openCsvStreams: q("#menuOpenCsvStreams"),
+      openCsvSolution: q("#menuOpenCsvSolution"),
+
+      saveToml: q("#menuSaveToml"),
+      saveCsvStreams: q("#menuSaveCsvStreams"),
+      saveCsvSolution: q("#menuSaveCsvSolution"),
+
+      solve: q("#btnSolve"),
+      verify: q("#btnVerify"),
+      clear: q("#btnClear"),
+    },
+
+    menus: {
+      open: q("#menuOpen"),
+      save: q("#menuSave"),
+    },
+
+    inputs: {
+      toml: q("#fileToml"),
+      csvStreams: q("#fileCsvStreams"),
+      csvSolution: q("#fileCsvSolution"),
+    },
+
+    tabs: {
+      description: q("#tabDescription"),
+      tables: q("#tabTables"),
+      toml: q("#tabToml"),
+      csv: q("#tabCsv"),
+      hide: q("#tabHide"),
+    },
+
+    panels: {
+      description: q("#panelDescription"),
+      tables: q("#panelTables"),
+      toml: q("#panelToml"),
+      csv: q("#panelCsv"),
+      hide: q("#panelHide"),
+    },
+
+    tabPanels: q("#tabPanels"),
+    testModeBlock: q("#testModeBlock"),
+
+    description: {
+      pre: q("#descriptionText"),
+    },
+
+    toml: {
+      textarea: q("#tomlText"),
+    },
+
+    csv: {
+      streamsTextarea: q("#csvStreamsText"),
+      solutionTextarea: q("#csvSolutionText"),
+    },
+
+    tables: {
+      streamsTable: q("#streamsTable"),
+      exchangersTable: q("#exchangersTable"),
+    },
+  };
+};
