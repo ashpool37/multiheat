@@ -13,25 +13,9 @@ import { renderVisualization } from "../render/visualization.js";
  */
 
 /**
- * @param {any} ui
- * @returns {number}
+ * «Высота как TOML» задаётся через CSS (дефолтная высота визуализации),
+ * а не через JS и не «в реальном времени».
  */
-const computeTargetVizHeightCssPx = (ui) => {
-  // Пытаемся взять реальную высоту TOML-редактора (если он измерим).
-  const tomlEl = ui?.toml?.textarea;
-  if (tomlEl) {
-    const r = tomlEl.getBoundingClientRect();
-    if (Number.isFinite(r.height) && r.height > 0) return Math.floor(r.height);
-  }
-
-  // Фолбэк: ориентируемся на ограничения из CSS (#tomlText: min-height 40vh, max-height 70vh).
-  const vh = Math.max(320, Math.floor(window.innerHeight || 720));
-  const minH = Math.floor(vh * 0.4);
-  const maxH = Math.floor(vh * 0.7);
-  const midH = Math.floor(vh * 0.55);
-
-  return Math.max(minH, Math.min(maxH, midH));
-};
 
 /**
  * @param {any} ui
@@ -118,12 +102,7 @@ const redraw = (ui, store, opts = {}) => {
   if (vizPanel.hidden) return;
   if (!store.visualizationEnabled && !opts.force) return;
 
-  const heightCssPx = computeTargetVizHeightCssPx(ui);
-
-  // Фиксируем высоту панели, чтобы визуализация была «как TOML».
-  // Важно: размер рендера берём по canvas (а не по контейнеру с padding),
-  // чтобы в split-режиме не было «растягивания» и смещений.
-  vizPanel.style.height = `${heightCssPx}px`;
+  // Высота визуализации задаётся через CSS; JS не управляет дефолтной высотой.
 
   const r = canvas.getBoundingClientRect();
   if (!Number.isFinite(r.width) || r.width <= 0) return;

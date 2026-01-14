@@ -224,11 +224,11 @@ button.secondary:hover {
     overflow: hidden;
 }
 
-/* Canvas растягиваем на всю панель; фактический DPR-скейл делается в JS. */
+/* Canvas: дефолтные ограничения по высоте такие же, как у #tomlText (min/max на базе vh). */
 .mh-vizCanvas {
     display: block;
     width: 100%;
-    height: 100%;
+    height: clamp(40vh, 447px, 70vh);
 }
 
 .tab {
