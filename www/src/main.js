@@ -1531,15 +1531,22 @@ await init();
 // Режим тестирования: показывает заглушку и по умолчанию уводит во вкладку "Скрыть".
 (() => {
   const btnTest = document.querySelector("#btnTest");
+  const btnVisualize = document.querySelector("#btnVisualize");
   const block = ui.testModeBlock;
 
   if (!btnTest || !block) return;
+
+  const setPressed = (btn, pressed) => {
+    if (!btn) return;
+    btn.setAttribute("aria-pressed", pressed ? "true" : "false");
+  };
 
   const apply = () => {
     const active = btnTest.getAttribute("aria-pressed") === "true";
     block.hidden = !active;
 
     if (active) {
+      setPressed(btnVisualize, false);
       switchTab(Tab.hide);
     }
   };

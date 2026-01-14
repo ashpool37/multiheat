@@ -132,15 +132,6 @@
                         </button>
 
                         <button
-                            id="btnVisualize"
-                            type="button"
-                            class="mh-toggle"
-                            aria-pressed="false"
-                        >
-                            📊 Визуализировать
-                        </button>
-
-                        <button
                             id="btnTest"
                             type="button"
                             class="mh-toggle"
@@ -175,57 +166,70 @@
                 <div class="row"></div>
 
                 <section aria-label="Вкладки">
-                    <div class="tabs" role="tablist" aria-label="Вкладки">
-                        <button
-                            id="tabDescription"
-                            class="tab"
-                            type="button"
-                            role="tab"
-                            aria-selected="true"
-                            aria-controls="panelDescription"
-                        >
-                            Описание
-                        </button>
-                        <button
-                            id="tabTables"
-                            class="tab"
-                            type="button"
-                            role="tab"
-                            aria-selected="false"
-                            aria-controls="panelTables"
-                        >
-                            Таблица
-                        </button>
-                        <button
-                            id="tabToml"
-                            class="tab"
-                            type="button"
-                            role="tab"
-                            aria-selected="false"
-                            aria-controls="panelToml"
-                        >
-                            TOML
-                        </button>
-                        <button
-                            id="tabCsv"
-                            class="tab"
-                            type="button"
-                            role="tab"
-                            aria-selected="false"
-                            aria-controls="panelCsv"
-                        >
-                            CSV
-                        </button>
-                        <button
-                            id="tabHide"
-                            class="tab"
-                            type="button"
-                            role="tab"
-                            aria-selected="false"
-                            aria-controls="panelHide"
-                        >
-                            Скрыть
-                        </button>
+                    <div class="mh-tabsRow">
+                        <div class="tabs" role="tablist" aria-label="Вкладки">
+                            <button
+                                id="tabDescription"
+                                class="tab"
+                                type="button"
+                                role="tab"
+                                aria-selected="true"
+                                aria-controls="panelDescription"
+                            >
+                                Описание
+                            </button>
+                            <button
+                                id="tabTables"
+                                class="tab"
+                                type="button"
+                                role="tab"
+                                aria-selected="false"
+                                aria-controls="panelTables"
+                            >
+                                Таблица
+                            </button>
+                            <button
+                                id="tabToml"
+                                class="tab"
+                                type="button"
+                                role="tab"
+                                aria-selected="false"
+                                aria-controls="panelToml"
+                            >
+                                TOML
+                            </button>
+                            <button
+                                id="tabCsv"
+                                class="tab"
+                                type="button"
+                                role="tab"
+                                aria-selected="false"
+                                aria-controls="panelCsv"
+                            >
+                                CSV
+                            </button>
+                            <button
+                                id="tabHide"
+                                class="tab"
+                                type="button"
+                                role="tab"
+                                aria-selected="false"
+                                aria-controls="panelHide"
+                            >
+                                Скрыть
+                            </button>
+                        </div>
+
+                        <div class="mh-tabsRight">
+                            <button
+                                id="btnVisualize"
+                                type="button"
+                                class="mh-toggle"
+                                aria-pressed="false"
+                            >
+                                📊 Визуализировать
+                            </button>
+                        </div>
                     </div>
                 </section>
             </div>
