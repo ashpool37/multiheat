@@ -65,36 +65,76 @@ const applyLayout = (ui, store) => {
   };
 
   // Сброс «сплита» до базового состояния.
+  //
+  // Адаптивное поведение:
+  // - на широких экранах: 50/50 слева вкладки, справа активная правая панель
+  // - на узких экранах: правая панель должна быть НАД вкладками (вертикальная раскладка)
   const setSplit = (split) => {
+    const narrow =
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(max-width: 860px)").matches;
+
     if (split) {
       viewsLayout.style.display = "flex";
-      viewsLayout.style.alignItems = "flex-start";
       viewsLayout.style.gap = "12px";
 
-      tabPanels.style.flex = "1 1 0";
-      tabPanels.style.minWidth = "0";
+      if (narrow) {
+        // Узкий экран: правая панель сверху, вкладки снизу.
+        viewsLayout.style.flexDirection = "column";
+        viewsLayout.style.alignItems = "stretch";
 
-      if (vizPanel) {
-        vizPanel.style.flex = "1 1 0";
-        vizPanel.style.minWidth = "0";
-      }
-      if (settingsPanel) {
-        settingsPanel.style.flex = "1 1 0";
-        settingsPanel.style.minWidth = "0";
+        tabPanels.style.order = "2";
+        tabPanels.style.flex = "1 1 auto";
+        tabPanels.style.minWidth = "0";
+
+        if (vizPanel) {
+          vizPanel.style.order = "1";
+          vizPanel.style.flex = "0 0 auto";
+          vizPanel.style.minWidth = "0";
+        }
+        if (settingsPanel) {
+          settingsPanel.style.order = "1";
+          settingsPanel.style.flex = "0 0 auto";
+          settingsPanel.style.minWidth = "0";
+        }
+      } else {
+        // Широкий экран: классический сплит 50/50.
+        viewsLayout.style.flexDirection = "row";
+        viewsLayout.style.alignItems = "flex-start";
+
+        tabPanels.style.order = "";
+        tabPanels.style.flex = "1 1 0";
+        tabPanels.style.minWidth = "0";
+
+        if (vizPanel) {
+          vizPanel.style.order = "";
+          vizPanel.style.flex = "1 1 0";
+          vizPanel.style.minWidth = "0";
+        }
+        if (settingsPanel) {
+          settingsPanel.style.order = "";
+          settingsPanel.style.flex = "1 1 0";
+          settingsPanel.style.minWidth = "0";
+        }
       }
     } else {
       viewsLayout.style.display = "";
       viewsLayout.style.alignItems = "";
       viewsLayout.style.gap = "";
+      viewsLayout.style.flexDirection = "";
 
+      tabPanels.style.order = "";
       tabPanels.style.flex = "";
       tabPanels.style.minWidth = "";
 
       if (vizPanel) {
+        vizPanel.style.order = "";
         vizPanel.style.flex = "";
         vizPanel.style.minWidth = "";
       }
       if (settingsPanel) {
+        settingsPanel.style.order = "";
         settingsPanel.style.flex = "";
         settingsPanel.style.minWidth = "";
       }
@@ -471,8 +511,15 @@ export const createVisualizationController = ({ ui, store, multiheat }) => {
       });
     }
 
-    // Перерисовка при resize окна.
+    // Обновление при resize окна.
+    //
+    // Важно:
+    // - раскладка должна пересчитываться всегда, потому что на узких экранах правая панель
+    //   должна переходить в режим "сверху над вкладками"
+    // - перерисовку canvas выполняем только когда визуализация действительно активна
     window.addEventListener("resize", () => {
+      applyLayout(ui, store);
+
       if (!store.visualizationEnabled) return;
       scheduleRedraw();
     });
