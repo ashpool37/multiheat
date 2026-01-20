@@ -42,10 +42,18 @@ import {
 
 import { renderDescriptionHtml } from "../render/description.js";
 import { renderTables } from "../render/tables.js";
+import { solveGreedyJs } from "../solver/solve_greedy_js.js";
 
 /**
  * Основной модуль приложения: связывает UI, состояние, представления и Zig/WASM.
  */
+
+// --- Синтез на чистом JavaScript ---
+//
+// Реализация жадного алгоритма вынесена в `../solver/solve_greedy_js.js`.
+// Здесь используем импорт `solveGreedyJs()`.
+//
+// (Преимущество: app.js не разрастается, алгоритм можно тестировать/сравнивать отдельно.)
 
 const setUiEnabled = (ui, enabled) => {
   const allButtons = [...Object.values(ui.buttons), ...Object.values(ui.tabs)];
@@ -313,23 +321,54 @@ export const startApp = async () => {
   // Выбор алгоритма (панель «настройки»).
   // Почему: селектор — источник истины для store, а store — для solveCurrent().
   if (ui?.settings?.algorithmSelect) {
-    // Дефолт: жадный.
-    if (!store.solverAlgorithm) store.solverAlgorithm = "greedy";
-
     const sel = ui.settings.algorithmSelect;
 
+    // Новый формат: машиночитаемые идентификаторы с суффиксом _zig/_js.
+    // Для обратной совместимости принимаем старые значения без суффикса.
+    const normalizeAlgoId = (v) => {
+      const s = String(v ?? "").trim();
+      if (!s) return "solve_greedy_zig";
+
+      // Если уже новый формат — как есть.
+      if (s.endsWith("_zig") || s.endsWith("_js")) return s;
+
+      // Старые значения селектора → считаем Zig/WASM.
+      if (s === "solve_greedy") return "solve_greedy_zig";
+      if (s === "solve_curves") return "solve_curves_zig";
+      if (s === "solve_trivial") return "solve_trivial_zig";
+
+      // Фолбэк: тоже Zig/WASM.
+      return `${s}_zig`;
+    };
+
+    // Основной идентификатор алгоритма — store.solverAlgorithmId.
+    // legacy store.solverAlgorithm поддерживаем без указания провайдера ("greedy"|"curves"|"trivial").
+    if (!store.solverAlgorithmId) {
+      const a = String(store.solverAlgorithm ?? "").trim();
+
+      if (a === "trivial") store.solverAlgorithmId = "solve_trivial_zig";
+      else if (a === "curves") store.solverAlgorithmId = "solve_curves_zig";
+      else if (a === "greedy") store.solverAlgorithmId = "solve_greedy_zig";
+      // Старые/экспериментальные значения с провайдером — тоже мигрируем.
+      else if (a === "trivial_zig")
+        store.solverAlgorithmId = "solve_trivial_zig";
+      else if (a === "curves_zig") store.solverAlgorithmId = "solve_curves_zig";
+      else if (a === "greedy_zig") store.solverAlgorithmId = "solve_greedy_zig";
+      else if (a === "greedy_js") store.solverAlgorithmId = "solve_greedy_js";
+      else store.solverAlgorithmId = "solve_greedy_zig";
+    }
+
     // Инициализируем значение селектора из store.
-    sel.value =
-      store.solverAlgorithm === "trivial"
-        ? "solve_trivial"
-        : store.solverAlgorithm === "curves"
-          ? "solve_curves"
-          : "solve_greedy";
+    sel.value = normalizeAlgoId(store.solverAlgorithmId);
 
     sel.addEventListener("change", () => {
-      const v = sel.value;
-      if (v === "solve_trivial") store.solverAlgorithm = "trivial";
-      else if (v === "solve_curves") store.solverAlgorithm = "curves";
+      const v = normalizeAlgoId(sel.value);
+      store.solverAlgorithmId = v;
+
+      // legacy store.solverAlgorithm: без указания провайдера, только базовый алгоритм.
+      const base = v.replace(/_(zig|js)$/, "");
+      if (base === "solve_trivial") store.solverAlgorithm = "trivial";
+      else if (base === "solve_curves") store.solverAlgorithm = "curves";
       else store.solverAlgorithm = "greedy";
     });
   }
@@ -650,38 +689,43 @@ export const startApp = async () => {
         return;
       }
 
-      const system = buildZigSystem(multiheat, store.state, false);
+      // Zig-систему собираем только для ветки Zig/WASM (JS-решатель работает напрямую с каноническим state).
 
       // Выбор алгоритма синтеза.
       //
-      // Требования:
-      // - функции Zig: solve_greedy, solve_curves, solve_trivial
-      // - выбор алгоритма зависит только от выпадающего списка «Алгоритм»
-      // - по умолчанию: жадный алгоритм
-      const algo =
-        store.solverAlgorithm === "trivial"
-          ? "trivial"
-          : store.solverAlgorithm === "curves"
-            ? "curves"
-            : "greedy";
+      // Новый формат идентификаторов:
+      // - суффикс _zig: реализация Zig/WASM
+      // - суффикс _js: реализация на чистом JavaScript
+      //
+      // Для обратной совместимости поддерживаем старые значения без суффикса.
+      const normalizeAlgoId = (v) => {
+        const s = String(v ?? "").trim();
+        if (!s) return "solve_greedy_zig";
+        if (s.endsWith("_zig") || s.endsWith("_js")) return s;
 
-      const solveFn =
-        algo === "trivial"
-          ? multiheat.solve_trivial
-          : algo === "curves"
-            ? multiheat.solve_curves
-            : multiheat.solve_greedy;
+        if (s === "solve_greedy") return "solve_greedy_zig";
+        if (s === "solve_curves") return "solve_curves_zig";
+        if (s === "solve_trivial") return "solve_trivial_zig";
 
-      const usedName =
-        algo === "trivial"
-          ? "solve_trivial"
-          : algo === "curves"
-            ? "solve_curves"
-            : "solve_greedy";
+        return `${s}_zig`;
+      };
+
+      const algoId = normalizeAlgoId(
+        store.solverAlgorithmId ??
+          (store.solverAlgorithm === "trivial"
+            ? "solve_trivial_zig"
+            : store.solverAlgorithm === "curves"
+              ? "solve_curves_zig"
+              : "solve_greedy_zig"),
+      );
+
+      const provider = algoId.endsWith("_js") ? "js" : "zig";
+      const baseName = algoId.replace(/_(zig|js)$/, "");
+      const usedName = `${baseName}_${provider}`;
 
       const humanAlgo = (() => {
         // Берём человекочитаемое имя из селектора алгоритмов (как в UI),
-        // чтобы статистика всегда совпадала с текущими подписями в настройках.
+        // чтобы статистика совпадала с текущими подписями в настройках.
         const sel = ui?.settings?.algorithmSelect ?? null;
         if (sel && sel instanceof HTMLSelectElement) {
           const opt =
@@ -693,27 +737,17 @@ export const startApp = async () => {
           if (label) return label;
         }
 
-        // Фолбэк (на случай отсутствия селектора/опции).
-        return algo === "trivial"
-          ? "Без теплообмена"
-          : algo === "curves"
-            ? "Эквивалентные кривые"
-            : "Жадный";
+        // Фолбэк: формируем по типу реализации.
+        if (baseName === "solve_trivial")
+          return provider === "js"
+            ? "Без теплообмена (JavaScript)"
+            : "Без теплообмена (Zig/WASM)";
+        if (baseName === "solve_curves")
+          return provider === "js"
+            ? "Эквивалентные кривые (JavaScript)"
+            : "Эквивалентные кривые (Zig/WASM)";
+        return provider === "js" ? "Жадный (JavaScript)" : "Жадный (Zig/WASM)";
       })();
-
-      if (typeof solveFn !== "function") {
-        const human =
-          algo === "trivial"
-            ? "«Без теплообмена»"
-            : algo === "curves"
-              ? "«Эквивалентные кривые»"
-              : "«Жадный»";
-        setStatus(
-          "err",
-          `Невозможно синтезировать: алгоритм ${human} недоступен в модуле вычислений.`,
-        );
-        return;
-      }
 
       const nowMs =
         typeof performance !== "undefined" &&
@@ -721,25 +755,59 @@ export const startApp = async () => {
           ? () => performance.now()
           : () => Date.now();
 
+      let nextExchangers = null;
+
       const t0 = nowMs();
 
-      try {
-        solveFn(system);
-      } catch (e) {
-        logError(`Синтез (${usedName}) завершился с ошибкой`, e);
-        setStatus(
-          "err",
-          `Не удалось синтезировать систему: ${describeZigError(e)}`,
-        );
-        return;
+      // Выполнение синтеза
+      if (provider === "js") {
+        if (baseName !== "solve_greedy") {
+          setStatus(
+            "err",
+            "Невозможно синтезировать: выбранный алгоритм JavaScript пока не реализован.",
+          );
+          return;
+        }
+
+        nextExchangers = solveGreedyJs(store.state, { min_dt: 20 });
+      } else {
+        const solveFn =
+          baseName === "solve_trivial"
+            ? multiheat.solve_trivial
+            : baseName === "solve_curves"
+              ? multiheat.solve_curves
+              : multiheat.solve_greedy;
+
+        if (typeof solveFn !== "function") {
+          setStatus(
+            "err",
+            `Невозможно синтезировать: алгоритм «${humanAlgo}» недоступен в модуле вычислений.`,
+          );
+          return;
+        }
+
+        const system = buildZigSystem(multiheat, store.state, false);
+
+        try {
+          solveFn(system);
+        } catch (e) {
+          logError(`Синтез (${usedName}) завершился с ошибкой`, e);
+          setStatus(
+            "err",
+            `Не удалось синтезировать систему: ${describeZigError(e)}`,
+          );
+          return;
+        }
+
+        const zigExList = dumpExchangersFromZig(system.exchangers);
+        nextExchangers = zigExchangersToState(zigExList);
       }
 
       const solveTimeMs = Math.round(nowMs() - t0);
 
-      const zigExList = dumpExchangersFromZig(system.exchangers);
       const next = {
         ...store.state,
-        exchanger: zigExchangersToState(zigExList),
+        exchanger: Array.isArray(nextExchangers) ? nextExchangers : [],
       };
 
       const normalized = validateAndNormalizeState(next);

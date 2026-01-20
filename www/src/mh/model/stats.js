@@ -174,12 +174,24 @@ export const formatStatsForDescription = (stats) => {
     const a = algorithmUsed ? String(algorithmUsed).trim() : "";
     if (!a) return null;
 
-    if (a === "solve_greedy") return "Жадный";
-    if (a === "solve_curves") return "Эквивалентные кривые";
-    if (a === "solve_trivial") return "Без теплообмена";
+    // Поддержка новых идентификаторов: <base>_(zig|js)
+    const m = a.match(/^(.*)_(zig|js)$/);
+    const base = m ? m[1] : a;
+    const provider = m ? m[2] : null;
 
-    // Фолбэк: показываем исходную строку.
-    return a;
+    let baseLabel = null;
+    if (base === "solve_greedy") baseLabel = "Жадный";
+    else if (base === "solve_curves") baseLabel = "Эквивалентные кривые";
+    else if (base === "solve_trivial") baseLabel = "Без теплообмена";
+
+    if (!baseLabel) {
+      // Фолбэк: показываем исходную строку.
+      return a;
+    }
+
+    if (provider === "zig") return `${baseLabel} (Zig/WASM)`;
+    if (provider === "js") return `${baseLabel} (JavaScript)`;
+    return baseLabel;
   };
 
   const algoLabelRaw =
