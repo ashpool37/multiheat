@@ -88,14 +88,14 @@ export const renderDescriptionHtml = (state, host) => {
     }
   }
 
-  addSection("Потоки, отдающие тепло", hotItems);
-  addSection("Потоки, получающие тепло", coldItems);
-  addSection("Система теплообмена", exchItems);
-
   if (state && typeof state === "object" && state.stats) {
     const statsItems = formatStatsForDescription(state.stats);
     if (Array.isArray(statsItems) && statsItems.length > 0) {
       addSection("Статистика", statsItems);
     }
   }
+
+  addSection("Потоки, отдающие тепло", hotItems);
+  addSection("Потоки, получающие тепло", coldItems);
+  addSection("Система теплообмена", exchItems);
 };
