@@ -41,6 +41,11 @@
  */
 
 import { validateAndNormalizeState } from "../model/state.js";
+import * as multiheatModule from "../../../zig/multiheat_entry.zig";
+import { getBuildVersions } from "../build_versions.js";
+
+const { multiheat_version: BUILD_MULTIHEAT_VERSION } =
+  getBuildVersions(multiheatModule);
 
 const DEFAULT_NONISO_DT_K = 30;
 
@@ -405,7 +410,11 @@ export const createGeneratorController = ({ ui, store, refreshAllViews }) => {
     // Формируем новое состояние (без решения) и нормализуем его так же,
     // как при импорте из TOML/CSV (единые правила канонической модели).
     const nextStateRaw = {
-      multiheat: { version: "0.0.1", temp_unit: "K" },
+      // Версию брать из сборки (Zig/WASM): единый источник правды.
+      multiheat: {
+        version: BUILD_MULTIHEAT_VERSION,
+        temp_unit: "K",
+      },
       hot,
       cold,
       exchanger: [],

@@ -17,6 +17,7 @@ import {
 } from "../util/errors.js";
 
 import * as multiheatModule from "../../../zig/multiheat_entry.zig";
+import { getBuildVersions } from "../build_versions.js";
 
 import { defaultState, validateAndNormalizeState } from "../model/state.js";
 import { computeSolutionStats } from "../model/stats.js";
@@ -44,6 +45,25 @@ import { renderDescriptionHtml } from "../render/description.js";
 import { renderTables } from "../render/tables.js";
 import { solveGreedyJs } from "../solver/solve_greedy_js.js";
 import { solveCurvesJs } from "../solver/solve_curves_js.js";
+
+const { multiheat_version: BUILD_MULTIHEAT_VERSION } =
+  getBuildVersions(multiheatModule);
+
+const applyAppVersionUi = (versionStr) => {
+  const v =
+    typeof versionStr === "string" && versionStr.trim().length > 0
+      ? versionStr.trim()
+      : null;
+
+  if (!v) return;
+
+  // Заголовок вкладки браузера
+  document.title = `Multiheat ${v}`;
+
+  // Заголовок приложения в панели управления
+  const h1 = document.querySelector(".mh-title");
+  if (h1) h1.textContent = `Multiheat ${v}`;
+};
 
 /**
  * Основной модуль приложения: связывает UI, состояние, представления и Zig/WASM.
@@ -97,7 +117,7 @@ const createSync = ({ ui, store, refreshAllViews }) => {
 
     const partial = parseCsvStreamsToStatePartial(streamsText);
     const base = {
-      multiheat: { version: "0.0.1", temp_unit: "K" },
+      multiheat: { version: BUILD_MULTIHEAT_VERSION, temp_unit: "K" },
       hot: partial.hot,
       cold: partial.cold,
       exchanger: [],
@@ -244,6 +264,9 @@ const hasAnyUserData = ({ store, ui }) => {
  * @returns {Promise<{ ui: any, store: any, multiheat: any | null }>}
  */
 export const startApp = async () => {
+  // Версия должна приходить из сборки (единственный источник правды — build_options в Zig/WASM entrypoint).
+  applyAppVersionUi(BUILD_MULTIHEAT_VERSION);
+
   const ui = buildUiRefs(document);
   const store = createStore({ activeTab: Tab.toml });
   const { setStatus } = createStatus({ statusEl: ui.status });
@@ -445,7 +468,7 @@ export const startApp = async () => {
       if (store.viewsSuspended) {
         const partial = parseCsvStreamsToStatePartial(text);
         store.state = validateAndNormalizeState({
-          multiheat: { version: "0.0.1", temp_unit: "K" },
+          multiheat: { version: BUILD_MULTIHEAT_VERSION, temp_unit: "K" },
           hot: partial.hot,
           cold: partial.cold,
           exchanger: [],

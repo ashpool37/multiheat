@@ -1,6 +1,6 @@
 .{
     .name = .multiheat,
-    .version = "0.0.1",
+    .version = "1.0.0",
     .fingerprint = 0x7c12a837b638cb6c,
     .minimum_zig_version = "0.15.2",
     .dependencies = .{

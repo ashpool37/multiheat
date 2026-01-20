@@ -2,6 +2,44 @@ const std = @import("std");
 const toml = @import("toml");
 
 const common = @import("common");
+const build_options = @import("build_options");
+
+const SemVer = struct {
+    major: u32,
+    minor: u32,
+    patch: u32,
+};
+
+fn parseSemVer(s: []const u8) ?SemVer {
+    const trimmed = std.mem.trim(u8, s, " \t\r\n");
+
+    var it = std.mem.splitScalar(u8, trimmed, '.');
+    const a = it.next() orelse return null;
+    const b = it.next() orelse return null;
+    const c = it.next() orelse return null;
+
+    // Должно быть ровно 3 компоненты.
+    if (it.next() != null) return null;
+
+    const major = std.fmt.parseUnsigned(u32, a, 10) catch return null;
+    const minor = std.fmt.parseUnsigned(u32, b, 10) catch return null;
+    const patch = std.fmt.parseUnsigned(u32, c, 10) catch return null;
+
+    return .{ .major = major, .minor = minor, .patch = patch };
+}
+
+fn semverGE(a: SemVer, b: SemVer) bool {
+    if (a.major != b.major) return a.major > b.major;
+    if (a.minor != b.minor) return a.minor > b.minor;
+    return a.patch >= b.patch;
+}
+
+// Требование: major/minor версии конфигурации не должны быть "новее" major/minor текущей сборки.
+fn semverMajorMinorNotNewer(config: SemVer, build: SemVer) bool {
+    if (config.major < build.major) return true;
+    if (config.major > build.major) return false;
+    return config.minor <= build.minor;
+}
 
 fn isFiniteNonNegative(maybe_float: ?f32) bool {
     if (maybe_float) |value| {
@@ -118,8 +156,28 @@ pub const MultiheatOptions = struct {
     temp_unit: []const u8,
 
     pub fn isValid(self: *const MultiheatOptions) bool {
-        if (!std.mem.eql(u8, self.version, "0.0.1")) return false;
+        const earliest: SemVer = .{
+            .major = @intCast(build_options.earliest_config_version_major),
+            .minor = @intCast(build_options.earliest_config_version_minor),
+            .patch = @intCast(build_options.earliest_config_version_patch),
+        };
+
+        const build_ver: SemVer = .{
+            .major = @intCast(build_options.multiheat_version_major),
+            .minor = @intCast(build_options.multiheat_version_minor),
+            .patch = @intCast(build_options.multiheat_version_patch),
+        };
+
+        const cfg_ver = parseSemVer(self.version) orelse return false;
+
         if (!std.mem.eql(u8, self.temp_unit, "K")) return false;
+
+        // Требование:
+        // 1) версия конфигурации должна быть такой же или новее earliest_config_version;
+        // 2) major/minor конфигурации не должны быть новее major/minor текущей сборки.
+        if (!semverGE(cfg_ver, earliest)) return false;
+        if (!semverMajorMinorNotNewer(cfg_ver, build_ver)) return false;
+
         return true;
     }
 };

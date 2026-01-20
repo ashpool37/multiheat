@@ -19,7 +19,7 @@ Private Function BuildTomlFromSheet(oSheet As Object) As String
     Dim sb As String
     sb = ""
     sb = sb & "[multiheat]" & Chr(10)
-    sb = sb & "version = ""0.0.1""" & Chr(10)
+    sb = sb & "version = ""1.0.0""" & Chr(10)
     sb = sb & "temp_unit = ""K""" & Chr(10)
     sb = sb & Chr(10)
 

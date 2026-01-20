@@ -6,6 +6,15 @@ import {
   parseNumber,
 } from "../util/number.js";
 
+import * as multiheatModule from "../../../zig/multiheat_entry.zig";
+import {
+  getBuildVersions,
+  checkConfigVersionCompatibility,
+} from "../build_versions.js";
+
+// Единый источник правды по версиям: build.zig -> build_options -> Zig/WASM exports.
+const BUILD_VERSIONS = getBuildVersions(multiheatModule);
+
 // --- Каноническое состояние (семантика, близкая к конфигурационному TOML) ---
 
 /**
@@ -13,7 +22,7 @@ import {
  * @returns {{ multiheat: { version: string, temp_unit: string }, hot: any[], cold: any[], exchanger: any[], stats: any|null }}
  */
 export const defaultState = () => ({
-  multiheat: { version: "0.0.1", temp_unit: "K" },
+  multiheat: { version: BUILD_VERSIONS.multiheat_version, temp_unit: "K" },
   hot: [],
   cold: [],
   exchanger: [],
@@ -100,13 +109,20 @@ export const validateAndNormalizeState = (state) => {
   if (!state.multiheat || typeof state.multiheat !== "object")
     throw new Error("Отсутствует секция [multiheat].");
 
-  const version = state.multiheat.version;
+  const versionRaw = state.multiheat.version;
   const tempUnit = state.multiheat.temp_unit;
 
-  if (version !== "0.0.1")
-    throw new Error(
-      'Некорректное значение multiheat.version (ожидается "0.0.1").',
-    );
+  const version =
+    typeof versionRaw === "string"
+      ? versionRaw.trim()
+      : String(versionRaw ?? "").trim();
+
+  if (!version)
+    throw new Error("Некорректное значение multiheat.version (пустая строка).");
+
+  const compat = checkConfigVersionCompatibility(version, BUILD_VERSIONS);
+  if (!compat.ok) throw new Error(compat.reason);
+
   if (tempUnit !== "K")
     throw new Error(
       'Некорректное значение multiheat.temp_unit (ожидается "K").',
@@ -124,7 +140,7 @@ export const validateAndNormalizeState = (state) => {
   const statsN = stats && typeof stats === "object" ? stats : null;
 
   return {
-    multiheat: { version: "0.0.1", temp_unit: "K" },
+    multiheat: { version, temp_unit: "K" },
     hot: hotN,
     cold: coldN,
     exchanger: exN,
