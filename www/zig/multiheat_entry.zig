@@ -12,6 +12,7 @@ pub const EquivalentCurves = common.EquivalentCurves;
 
 pub const computeRequiredLoad = multiheat.computeRequiredLoad;
 pub const solve = multiheat.solve;
+pub const solve2 = multiheat.solve2;
 pub const verifySolution = multiheat.verifySolution;
 
 pub const computeEquivalentCurves = multiheat.computeEquivalentCurves;

@@ -462,7 +462,7 @@ button.secondary:hover {
     border-color: #e2e8f0;
 }
 
-/* Блок режима тестирования: заглушка, визуально как большая кнопка */
+/* Блок режима тестирования: панель с интерактивными настройками */
 #testModeBlock[hidden] {
     display: none !important;
 }
@@ -473,10 +473,61 @@ button.secondary:hover {
     border-radius: 12px;
     border: 1px solid #cbd5e1;
     background: #ffffff;
-    color: #94a3b8;
+    color: #0f172a;
+
+    /* Важно: блок интерактивный (выпадающий список и т.п.) */
+    user-select: auto;
+    pointer-events: auto;
+
+    /* По умолчанию — аккуратная «панель настроек» */
     display: flex;
     align-items: center;
     justify-content: center;
-    user-select: none;
-    pointer-events: none;
+    padding: 14px 16px;
+}
+
+/* Контейнер управляющих элементов внутри #testModeBlock */
+#testModeBlock .mh-testControls {
+    width: 100%;
+    max-width: 720px;
+    display: flex;
+    align-items: center;
+    gap: 10px 12px;
+    flex-wrap: wrap;
+}
+
+/* Подписи полей */
+#testModeBlock .mh-testLabel {
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+/* Выпадающий список выбора алгоритма */
+#testModeBlock .mh-testSelect {
+    min-width: 240px;
+    height: 38px;
+    padding: 6px 10px;
+
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #0f172a;
+
+    font-size: 14px;
+    font-weight: 700;
+
+    outline: none;
+}
+
+#testModeBlock .mh-testSelect:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
+}
+
+/* Небольшая подпись/пояснение рядом с контролами (если понадобится) */
+#testModeBlock .mh-testHint {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
 }

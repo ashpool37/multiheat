@@ -8,6 +8,7 @@ import { $ } from "../util/dom.js";
  */
 export const buildUiRefs = (root = document) => {
   const q = (sel) => $(sel, root);
+  const qOpt = (sel) => root.querySelector(sel);
 
   return {
     status: q("#statusLabel"),
@@ -65,6 +66,10 @@ export const buildUiRefs = (root = document) => {
     viewsLayout: q("#viewsLayout"),
     tabPanels: q("#tabPanels"),
     testModeBlock: q("#testModeBlock"),
+
+    testMode: {
+      algorithmSelect: qOpt("#selAlgorithm"),
+    },
 
     description: {
       pre: q("#descriptionText"),

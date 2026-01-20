@@ -12,7 +12,8 @@ import { defaultState } from "../model/state.js";
  * @param {string} [opts.activeTab] Активная вкладка (по умолчанию `"toml"`)
  * @param {boolean} [opts.visualizationEnabled] Включена ли визуализация (по умолчанию `false`)
  * @param {boolean} [opts.eqCurvesEnabled] Включены ли эквивалентные кривые (по умолчанию `false`)
- * @returns {{ state: any, activeTab: string, viewsSuspended: boolean, visualizationEnabled: boolean, eqCurvesEnabled: boolean, dirty: { toml: boolean, csvStreams: boolean, csvSolution: boolean } }}
+ * @param {"greedy"|"equivalent"} [opts.solverAlgorithm] Выбранный алгоритм синтеза (по умолчанию `"greedy"`)
+ * @returns {{ state: any, activeTab: string, viewsSuspended: boolean, visualizationEnabled: boolean, eqCurvesEnabled: boolean, solverAlgorithm: "greedy"|"equivalent", dirty: { toml: boolean, csvStreams: boolean, csvSolution: boolean } }}
  */
 export const createStore = (opts = {}) => {
   const initialState = opts.state ?? defaultState();
@@ -24,6 +25,7 @@ export const createStore = (opts = {}) => {
     viewsSuspended: false,
     visualizationEnabled: opts.visualizationEnabled ?? false,
     eqCurvesEnabled: opts.eqCurvesEnabled ?? false,
+    solverAlgorithm: opts.solverAlgorithm ?? "greedy",
     dirty: {
       toml: false,
       csvStreams: false,

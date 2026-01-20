@@ -161,7 +161,24 @@
                     </div>
                 </section>
 
-                <div id="testModeBlock" class="mh-testBlock" hidden></div>
+                <div id="testModeBlock" class="mh-testBlock" hidden>
+                    <div
+                        class="mh-testControls"
+                        aria-label="Параметры тестового режима"
+                    >
+                        <label for="selAlgorithm" class="mh-testLabel"
+                            >Алгоритм:</label
+                        >
+                        <select
+                            id="selAlgorithm"
+                            class="mh-testSelect"
+                            aria-label="Алгоритм синтеза"
+                        >
+                            <option value="solve" selected>Жадный</option>
+                            <option value="solve2">Эквивалентные кривые</option>
+                        </select>
+                    </div>
+                </div>
 
                 <div class="row"></div>
 

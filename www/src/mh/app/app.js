@@ -339,6 +339,22 @@ export const startApp = async () => {
 
   setupTestMode({ ui, switchTab: tabs.switchTab, visualization });
 
+  // Выбор алгоритма в тестовом режиме.
+  // Почему: селектор должен быть источником истины для store, а store — для solveCurrent().
+  if (ui?.testMode?.algorithmSelect) {
+    // Дефолт: жадный.
+    if (!store.solverAlgorithm) store.solverAlgorithm = "greedy";
+
+    // Инициализируем значение селектора из store (на случай будущих сохранений/восстановлений).
+    ui.testMode.algorithmSelect.value =
+      store.solverAlgorithm === "equivalent" ? "solve2" : "solve";
+
+    ui.testMode.algorithmSelect.addEventListener("change", () => {
+      const v = ui.testMode.algorithmSelect.value;
+      store.solverAlgorithm = v === "solve2" ? "equivalent" : "greedy";
+    });
+  }
+
   // Флаги dirty редакторов
   ui.toml.textarea.addEventListener("input", () => {
     store.dirty.toml = true;
@@ -653,10 +669,45 @@ export const startApp = async () => {
 
       const system = buildZigSystem(multiheat, store.state, false);
 
+      // Выбор алгоритма синтеза в тестовом режиме.
+      //
+      // Требования:
+      // - по умолчанию используем жадный алгоритм (solve)
+      // - при выборе пользователем «Эквивалентные кривые» используем solve2
+      // - если включён режим эквивалентных кривых в визуализации — принудительно используем solve2
+      //
+      // Почему: хотим, чтобы селектор был источником истины для синтеза, а store — отражал текущий выбор.
+      if (ui?.testMode?.algorithmSelect) {
+        const v = ui.testMode.algorithmSelect.value;
+        store.solverAlgorithm = v === "solve2" ? "equivalent" : "greedy";
+      } else {
+        // На случай отсутствия селектора (нештатная разметка) — безопасный дефолт.
+        store.solverAlgorithm = "greedy";
+      }
+
+      const selectedName = store.eqCurvesEnabled
+        ? "solve2"
+        : store.solverAlgorithm === "equivalent"
+          ? "solve2"
+          : "solve";
+
+      const solveFn =
+        selectedName === "solve2" ? multiheat.solve2 : multiheat.solve;
+
+      if (selectedName === "solve2" && typeof solveFn !== "function") {
+        setStatus(
+          "err",
+          "Невозможно синтезировать: алгоритм «Эквивалентные кривые» недоступен в модуле вычислений.",
+        );
+        return;
+      }
+
+      const usedName = selectedName;
+
       try {
-        multiheat.solve(system);
+        solveFn(system);
       } catch (e) {
-        logError("Синтез (solve) завершился с ошибкой", e);
+        logError(`Синтез (${usedName}) завершился с ошибкой`, e);
         setStatus(
           "err",
           `Не удалось синтезировать систему: ${describeZigError(e)}`,
