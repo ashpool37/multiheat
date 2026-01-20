@@ -11,7 +11,8 @@ import { defaultState } from "../model/state.js";
  * @param {any} [opts.state] Начальное состояние (по умолчанию `defaultState()`)
  * @param {string} [opts.activeTab] Активная вкладка (по умолчанию `"toml"`)
  * @param {boolean} [opts.visualizationEnabled] Включена ли визуализация (по умолчанию `false`)
- * @returns {{ state: any, activeTab: string, viewsSuspended: boolean, visualizationEnabled: boolean, dirty: { toml: boolean, csvStreams: boolean, csvSolution: boolean } }}
+ * @param {boolean} [opts.eqCurvesEnabled] Включены ли эквивалентные кривые (по умолчанию `false`)
+ * @returns {{ state: any, activeTab: string, viewsSuspended: boolean, visualizationEnabled: boolean, eqCurvesEnabled: boolean, dirty: { toml: boolean, csvStreams: boolean, csvSolution: boolean } }}
  */
 export const createStore = (opts = {}) => {
   const initialState = opts.state ?? defaultState();
@@ -22,6 +23,7 @@ export const createStore = (opts = {}) => {
     activeTab: initialTab,
     viewsSuspended: false,
     visualizationEnabled: opts.visualizationEnabled ?? false,
+    eqCurvesEnabled: opts.eqCurvesEnabled ?? false,
     dirty: {
       toml: false,
       csvStreams: false,

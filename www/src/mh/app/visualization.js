@@ -1,4 +1,10 @@
 import { renderVisualization } from "../render/visualization.js";
+import { renderEquivalentCurves } from "../render/equivalent_curves.js";
+import {
+  buildZigSystem,
+  dumpZigList,
+  describeZigError,
+} from "../zig/interop.js";
 
 /**
  * Контроллер визуализации.
@@ -210,6 +216,97 @@ const redraw = (ui, store, opts = {}) => {
   if (!Number.isFinite(r.width) || r.width <= 0) return;
   if (!Number.isFinite(r.height) || r.height <= 0) return;
 
+  // Режим эквивалентных кривых: вместо схемы сети рисуем T+(Q) и T-(Q).
+  if (store.eqCurvesEnabled) {
+    const mh = opts?.multiheat;
+
+    const renderError = (msg) => {
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+
+      const rect = canvas.getBoundingClientRect();
+      if (!Number.isFinite(rect.width) || rect.width <= 0) return;
+      if (!Number.isFinite(rect.height) || rect.height <= 0) return;
+
+      const dpr = Math.max(1, Math.round(window.devicePixelRatio || 1));
+      const wCss = Math.max(1, Math.floor(rect.width));
+      const hCss = Math.max(1, Math.floor(rect.height));
+
+      const wPx = wCss * dpr;
+      const hPx = hCss * dpr;
+
+      if (canvas.width !== wPx) canvas.width = wPx;
+      if (canvas.height !== hPx) canvas.height = hPx;
+
+      // Работаем в CSS-координатах.
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, wCss, hCss);
+
+      ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
+      ctx.textBaseline = "top";
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#0f172a";
+
+      const pad = 12;
+      const text = String(msg ?? "");
+      const lines = text.split("\n");
+      for (let i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], pad, pad + i * 16);
+      }
+    };
+
+    if (!mh || typeof mh.computeEquivalentCurves !== "function") {
+      renderError(
+        "Эквивалентные кривые недоступны: Zig-модуль не инициализирован.",
+      );
+      return;
+    }
+
+    try {
+      // Важно: берём текущее каноническое состояние (как для solve/verify).
+      // Аппараты решения для построения эквивалентных кривых не нужны.
+      const system = buildZigSystem(mh, state, false);
+
+      const zigCurves = mh.computeEquivalentCurves(system);
+
+      const hot = dumpZigList(zigCurves.hot).map((p) => ({
+        q_MW: Number(p.q_MW),
+        temp_K: Number(p.temp_K),
+      }));
+      const cold = dumpZigList(zigCurves.cold).map((p) => ({
+        q_MW: Number(p.q_MW),
+        temp_K: Number(p.temp_K),
+      }));
+
+      const curves = {
+        dt_min_K: Number(zigCurves.dt_min_K),
+        hot,
+        cold,
+      };
+
+      renderEquivalentCurves({ canvas, curves });
+
+      // Освобождение памяти, выделенной в Zig.
+      // Важно: ошибки освобождения не должны ломать уже выполненную отрисовку.
+      if (typeof mh.freeEquivalentCurves === "function") {
+        try {
+          mh.freeEquivalentCurves(zigCurves);
+        } catch (freeErr) {
+          console.warn(
+            "Не удалось освободить память эквивалентных кривых:",
+            freeErr,
+          );
+        }
+      }
+    } catch (e) {
+      // Почему: визуализация не должна «падать» из-за ошибок вычисления.
+      console.error("Не удалось построить эквивалентные кривые:", e);
+      renderError(`Ошибка: ${describeZigError(e)}`);
+    }
+
+    return;
+  }
+
   renderVisualization({ canvas, state });
 };
 
@@ -224,7 +321,7 @@ const redraw = (ui, store, opts = {}) => {
  * @param {any} deps.ui
  * @param {any} deps.store
  */
-export const createVisualizationController = ({ ui, store }) => {
+export const createVisualizationController = ({ ui, store, multiheat }) => {
   let rafId = 0;
   /** @type {ResizeObserver | null} */
   let ro = null;
@@ -233,7 +330,7 @@ export const createVisualizationController = ({ ui, store }) => {
     if (rafId) cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(() => {
       rafId = 0;
-      redraw(ui, store);
+      redraw(ui, store, { multiheat });
     });
   };
 
@@ -241,6 +338,12 @@ export const createVisualizationController = ({ ui, store }) => {
     const btn = ui?.toggles?.visualize;
     if (!btn) return;
     store.visualizationEnabled = btn.getAttribute("aria-pressed") === "true";
+  };
+
+  const syncEqCurvesFromToggle = () => {
+    const btn = ui?.toggles?.eqCurves;
+    if (!btn) return;
+    store.eqCurvesEnabled = btn.getAttribute("aria-pressed") === "true";
   };
 
   const apply = () => {
@@ -255,6 +358,31 @@ export const createVisualizationController = ({ ui, store }) => {
     if (ui?.toggles?.visualize) {
       ui.toggles.visualize.addEventListener("click", () => {
         syncStoreFromToggle();
+
+        // Если визуализация выключена (в том числе вручную пользователем) —
+        // режим эквивалентных кривых автоматически сбрасываем.
+        if (!store.visualizationEnabled) {
+          store.eqCurvesEnabled = false;
+          const eqBtn = ui?.toggles?.eqCurves;
+          if (eqBtn) eqBtn.setAttribute("aria-pressed", "false");
+        }
+
+        apply();
+      });
+    }
+
+    // Переключатель «Эквивалентные кривые».
+    // Важно: это только режим отрисовки. При включении автоматически включаем панель визуализации.
+    if (ui?.toggles?.eqCurves) {
+      ui.toggles.eqCurves.addEventListener("click", () => {
+        syncEqCurvesFromToggle();
+
+        if (store.eqCurvesEnabled) {
+          store.visualizationEnabled = true;
+          const vizBtn = ui?.toggles?.visualize;
+          if (vizBtn) vizBtn.setAttribute("aria-pressed", "true");
+        }
+
         apply();
       });
     }
@@ -288,6 +416,15 @@ export const createVisualizationController = ({ ui, store }) => {
 
   // Инициализация состояния из текущего UI.
   syncStoreFromToggle();
+  syncEqCurvesFromToggle();
+
+  // Если эквивалентные кривые включены, а визуализация выключена — включаем визуализацию,
+  // иначе панель может остаться скрытой.
+  if (store.eqCurvesEnabled && !store.visualizationEnabled) {
+    store.visualizationEnabled = true;
+    const vizBtn = ui?.toggles?.visualize;
+    if (vizBtn) vizBtn.setAttribute("aria-pressed", "true");
+  }
 
   /**
    * Программно включить/выключить визуализацию.
@@ -303,6 +440,14 @@ export const createVisualizationController = ({ ui, store }) => {
     const btn = ui?.toggles?.visualize;
     if (btn) btn.setAttribute("aria-pressed", pressed ? "true" : "false");
 
+    // Почему: при программном отключении визуализации (например, тестовым режимом)
+    // режим эквивалентных кривых должен быть сброшен, чтобы не оставаться "включённым в фоне".
+    if (!pressed) {
+      store.eqCurvesEnabled = false;
+      const eqBtn = ui?.toggles?.eqCurves;
+      if (eqBtn) eqBtn.setAttribute("aria-pressed", "false");
+    }
+
     apply();
   };
 
@@ -310,7 +455,7 @@ export const createVisualizationController = ({ ui, store }) => {
     hookEvents,
     apply,
     setEnabled,
-    redraw: () => redraw(ui, store, { force: true }),
+    redraw: () => redraw(ui, store, { force: true, multiheat }),
     destroy,
   };
 };

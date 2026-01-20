@@ -100,17 +100,26 @@ export const getOptionalValue = (v) => {
 };
 
 /**
- * `dumpExchangersFromZig(xs)` → массив теплообменников из `system.exchangers`.
- * Поддерживает массивы, итерируемые объекты, array-like и одиночный объект.
+ * `dumpZigList(xs)` → универсальный помощник для извлечения массивов/срезов из zigar.
+ *
+ * Поддерживает:
+ * - обычные массивы JS
+ * - итерируемые объекты (Symbol.iterator)
+ * - array-like (length + индексатор)
+ * - одиночный объект
+ *
+ * Почему: zigar может представлять Zig `[]T` разными способами в JS, в зависимости от контекста.
  *
  * @param {any} xs
  * @returns {any[]}
  */
-export const dumpExchangersFromZig = (xs) => {
+export const dumpZigList = (xs) => {
   if (xs === null || xs === undefined) return [];
-  if (Array.isArray(xs)) return xs.map((ex) => ex);
+
+  if (Array.isArray(xs)) return xs.map((x) => x);
 
   const obj = Object(xs);
+
   if (typeof obj[Symbol.iterator] === "function") return Array.from(xs);
 
   if (typeof obj.length === "number") {
@@ -122,6 +131,15 @@ export const dumpExchangersFromZig = (xs) => {
 
   return [xs];
 };
+
+/**
+ * `dumpExchangersFromZig(xs)` → массив теплообменников из `system.exchangers`.
+ * Сохранено для совместимости с существующим кодом; использует `dumpZigList`.
+ *
+ * @param {any} xs
+ * @returns {any[]}
+ */
+export const dumpExchangersFromZig = (xs) => dumpZigList(xs);
 
 /**
  * `zigExchangersToState(zigExList)` → список `exchanger` в формате канонического состояния.

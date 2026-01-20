@@ -327,9 +327,14 @@ export const startApp = async () => {
   setSolverEnabled(ui, false);
 
   setupToggle("#btnVisualize");
+  setupToggle("#btnEqCurves");
   setupToggle("#btnTest");
 
-  visualization = createVisualizationController({ ui, store });
+  visualization = createVisualizationController({
+    ui,
+    store,
+    multiheat: multiheatModule,
+  });
   visualization.hookEvents();
 
   setupTestMode({ ui, switchTab: tabs.switchTab, visualization });

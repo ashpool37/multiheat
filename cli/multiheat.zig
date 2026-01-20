@@ -308,3 +308,257 @@ pub fn verifySolution(allocator: std.mem.Allocator, system: *const common.HeatSy
     if (@abs(total_hot_got - total_hot_req) > eps) return Error.Unbalanced;
     if (@abs(total_cold_got - total_cold_req) > eps) return Error.Unbalanced;
 }
+
+// ----------------------------
+// Эквивалентные температурные кривые T+(Q), T-(Q) для визуализации
+// ----------------------------
+
+fn lessF32Asc(_: void, a: f32, b: f32) bool {
+    return a < b;
+}
+fn lessF32Desc(_: void, a: f32, b: f32) bool {
+    return a > b;
+}
+
+fn buildUniqueSortedTemps(
+    allocator: std.mem.Allocator,
+    streams: []const common.HeatStream,
+    descending: bool,
+) ![]f32 {
+    var temps = try std.ArrayList(f32).initCapacity(allocator, streams.len * 2);
+    errdefer temps.deinit(allocator);
+
+    for (streams) |s| {
+        // Для изотермических участков in==out, но оставим оба добавления — затем уберём дубликаты.
+        try temps.append(allocator, s.in_temp_K);
+        try temps.append(allocator, s.out_temp_K);
+    }
+
+    if (temps.items.len == 0) {
+        temps.deinit(allocator);
+        return try allocator.alloc(f32, 0);
+    }
+
+    if (descending) {
+        std.sort.pdq(f32, temps.items, {}, lessF32Desc);
+    } else {
+        std.sort.pdq(f32, temps.items, {}, lessF32Asc);
+    }
+
+    const eps: f32 = 1e-6;
+    var uniq = try std.ArrayList(f32).initCapacity(allocator, temps.items.len);
+    errdefer uniq.deinit(allocator);
+
+    for (temps.items) |t| {
+        if (uniq.items.len == 0) {
+            try uniq.append(allocator, t);
+            continue;
+        }
+        const prev = uniq.items[uniq.items.len - 1];
+        if (@abs(t - prev) > eps) try uniq.append(allocator, t);
+    }
+
+    temps.deinit(allocator);
+    return try uniq.toOwnedSlice(allocator);
+}
+
+fn sumIsothermalLoadAtTemp(
+    streams: []const common.HeatStream,
+    temp_K: f32,
+) f32 {
+    const eps: f32 = 1e-6;
+    var total: f32 = 0.0;
+    for (streams) |s| {
+        if (!s.isothermal) continue;
+        if (@abs(s.in_temp_K - temp_K) <= eps) total += s.load_MW;
+    }
+    return total;
+}
+
+fn sumActiveRateOnInterval(
+    streams: []const common.HeatStream,
+    t0: f32,
+    t1: f32,
+) f32 {
+    // Сумма теплоёмкостных расходов (МВт/К) всех неизотермических потоков,
+    // которые полностью покрывают температурный интервал.
+    const eps: f32 = 1e-6;
+    const lo_int = @min(t0, t1);
+    const hi_int = @max(t0, t1);
+
+    var w_total: f32 = 0.0;
+    for (streams) |s| {
+        if (s.isothermal) continue;
+        const lo = @min(s.in_temp_K, s.out_temp_K);
+        const hi = @max(s.in_temp_K, s.out_temp_K);
+        if (lo <= lo_int + eps and hi >= hi_int - eps) {
+            w_total += s.rate_MW_per_K;
+        }
+    }
+    return w_total;
+}
+
+fn buildEquivalentCurve(
+    allocator: std.mem.Allocator,
+    streams: []const common.HeatStream,
+) ![]common.EqCurvePoint {
+    const eps: f32 = 1e-6;
+
+    // Важно: строим обе кривые в возрастающем направлении температуры (как в run.ijs),
+    // чтобы на графике обе зависимости были монотонно возрастающими по T при росте Q.
+    const temps = try buildUniqueSortedTemps(allocator, streams, false);
+    defer allocator.free(temps);
+
+    if (temps.len == 0) return try allocator.alloc(common.EqCurvePoint, 0);
+
+    var points = try std.ArrayList(common.EqCurvePoint).initCapacity(allocator, temps.len * 2);
+    errdefer points.deinit(allocator);
+
+    var q_acc: f32 = 0.0;
+
+    // Стартовая точка: Q=0 на минимальной температуре.
+    try points.append(allocator, .{ .q_MW = 0.0, .temp_K = temps[0] });
+
+    var i: usize = 0;
+    while (i + 1 < temps.len) : (i += 1) {
+        const t0 = temps[i];
+        const t1 = temps[i + 1];
+
+        // Температура возрастает: t1 >= t0.
+        const dT = @abs(t1 - t0);
+        if (dT > eps) {
+            const w_total = sumActiveRateOnInterval(streams, t0, t1);
+            if (w_total > eps) {
+                q_acc += w_total * dT;
+            }
+            // Даже если w_total==0, точку температурного излома фиксируем для визуализации.
+            // Это делает кривую “кусочно-линейной” по заданной сетке температур.
+            if (@abs(points.items[points.items.len - 1].temp_K - t1) > eps) {
+                try points.append(allocator, .{ .q_MW = q_acc, .temp_K = t1 });
+            } else if (@abs(points.items[points.items.len - 1].q_MW - q_acc) > eps) {
+                try points.append(allocator, .{ .q_MW = q_acc, .temp_K = t1 });
+            }
+        }
+
+        // Изотермические участки на температуре t1 дают “плато” (рост Q при постоянной T).
+        const q_iso = sumIsothermalLoadAtTemp(streams, t1);
+        if (q_iso > eps) {
+            q_acc += q_iso;
+            try points.append(allocator, .{ .q_MW = q_acc, .temp_K = t1 });
+        }
+    }
+
+    return try points.toOwnedSlice(allocator);
+}
+
+fn minMaxSystemTemp(system: *const common.HeatSystem) struct { min: f32, max: f32 } {
+    var min_t: f32 = std.math.inf(f32);
+    var max_t: f32 = -std.math.inf(f32);
+
+    for (system.hot_streams) |s| {
+        min_t = @min(min_t, @min(s.in_temp_K, s.out_temp_K));
+        max_t = @max(max_t, @max(s.in_temp_K, s.out_temp_K));
+    }
+    for (system.cold_streams) |s| {
+        min_t = @min(min_t, @min(s.in_temp_K, s.out_temp_K));
+        max_t = @max(max_t, @max(s.in_temp_K, s.out_temp_K));
+    }
+
+    if (!std.math.isFinite(min_t)) min_t = 0.0;
+    if (!std.math.isFinite(max_t)) max_t = 0.0;
+    return .{ .min = min_t, .max = max_t };
+}
+
+fn totalRequired(streams: []const common.HeatStream) f32 {
+    var total: f32 = 0.0;
+    for (streams) |s| total += computeRequiredLoad(s);
+    return total;
+}
+
+/// Построить эквивалентные температурные кривые (T+(Q), T-(Q)) для текущей системы.
+///
+/// Важно:
+/// - кривые строятся независимо для горячей и холодной стороны по определению эквивалентной модели;
+/// - если суммарные тепловые нагрузки горячей/холодной подсистем не совпадают,
+///   добавляется одна синтетическая изотермическая “утилита” (нагреватель или охладитель),
+///   чтобы обе кривые имели одинаковую финальную Q (как в run.ijs).
+pub fn computeEquivalentCurves(
+    allocator: std.mem.Allocator,
+    system: *const common.HeatSystem,
+) !common.EquivalentCurves {
+    const dt_min: f32 = @floatFromInt(system.min_dt);
+    const def_dt: f32 = @floatFromInt(system.def_dt);
+
+    const totals = minMaxSystemTemp(system);
+    const t_min = totals.min;
+    const t_max = totals.max;
+
+    const q_hot = totalRequired(system.hot_streams);
+    const q_cold = totalRequired(system.cold_streams);
+    const qd: f32 = q_cold - q_hot;
+
+    var hot_buf = try std.ArrayList(common.HeatStream).initCapacity(
+        allocator,
+        system.hot_streams.len + 1,
+    );
+    errdefer hot_buf.deinit(allocator);
+    try hot_buf.appendSlice(allocator, system.hot_streams);
+
+    var cold_buf = try std.ArrayList(common.HeatStream).initCapacity(
+        allocator,
+        system.cold_streams.len + 1,
+    );
+    errdefer cold_buf.deinit(allocator);
+    try cold_buf.appendSlice(allocator, system.cold_streams);
+
+    const eps: f32 = 1e-6;
+    if (qd > eps) {
+        // Не хватает тепла горячих: добавляем “горячую утилиту” как изотермический горячий поток сверху.
+        const t_util = t_max + def_dt;
+        try hot_buf.append(allocator, .{
+            .isothermal = true,
+            .in_temp_K = t_util,
+            .out_temp_K = t_util,
+            .rate_MW_per_K = 0.0,
+            .load_MW = qd,
+        });
+    } else if (qd < -eps) {
+        // Избыток тепла горячих: добавляем “холодную утилиту” как изотермический холодный поток снизу.
+        const t_util = t_min - def_dt;
+        try cold_buf.append(allocator, .{
+            .isothermal = true,
+            .in_temp_K = t_util,
+            .out_temp_K = t_util,
+            .rate_MW_per_K = 0.0,
+            .load_MW = -qd,
+        });
+    }
+
+    const hot_curve = try buildEquivalentCurve(allocator, hot_buf.items);
+    errdefer allocator.free(hot_curve);
+
+    const cold_curve = try buildEquivalentCurve(allocator, cold_buf.items);
+    errdefer allocator.free(cold_curve);
+
+    hot_buf.deinit(allocator);
+    cold_buf.deinit(allocator);
+
+    return .{
+        .dt_min_K = dt_min,
+        .hot = hot_curve,
+        .cold = cold_curve,
+    };
+}
+
+/// Освободить память, выделенную `computeEquivalentCurves`.
+/// Почему: кривые возвращаются как срезы, которые должны быть освобождены явным вызовом.
+pub fn freeEquivalentCurves(
+    allocator: std.mem.Allocator,
+    curves: *common.EquivalentCurves,
+) void {
+    allocator.free(curves.hot);
+    allocator.free(curves.cold);
+    curves.hot = &.{};
+    curves.cold = &.{};
+    curves.dt_min_K = 0.0;
+}

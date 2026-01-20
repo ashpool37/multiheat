@@ -31,6 +31,7 @@ export const buildUiRefs = (root = document) => {
 
     toggles: {
       visualize: q("#btnVisualize"),
+      eqCurves: q("#btnEqCurves"),
       test: q("#btnTest"),
     },
 
