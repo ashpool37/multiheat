@@ -276,6 +276,409 @@ pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
     system.exchangers = try exchangers.toOwnedSlice(allocator);
 }
 
+pub fn solve2(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
+    // Алгоритм синтеза по методологии диссертации (через эквивалентную двухпоточную модель)
+    // в детерминированной инженерной интерпретации:
+    //
+    // 1) вводим общий температурный каркас (интервалы однородности) по "сдвинутым" температурам:
+    //    cold-сторона сдвигается вверх на ΔTmin, чтобы ограничение реализуемости выполнялось автоматически;
+    // 2) идём по температуре сверху вниз и накапливаем "пакеты тепла" от горячих потоков;
+    // 3) на каждом температурном интервале удовлетворяем потребность холодных потоков
+    //    за счёт накопленного тепла (межпоточный обмен), а остаток — за счёт утилит;
+    // 4) оставшийся избыток тепла горячих потоков отправляем на охлаждение (cold utility).
+    //
+    // Важно: API и структуры данных не меняются — на выходе по-прежнему `system.exchangers`.
+    const dt_min: f32 = @floatFromInt(system.min_dt);
+    const eps: f32 = 1e-6;
+
+    const hot_count = system.hot_streams.len;
+    const cold_count = system.cold_streams.len;
+
+    // Базовая валидация входа (минимум, чтобы избежать деления на ноль и отрицательных W).
+    for (system.hot_streams) |s| {
+        if (!s.isothermal and !(s.rate_MW_per_K > 0)) return Error.Infeasible;
+        if (s.isothermal and !(s.load_MW >= 0)) return Error.Infeasible;
+    }
+    for (system.cold_streams) |s| {
+        if (!s.isothermal and !(s.rate_MW_per_K > 0)) return Error.Infeasible;
+        if (s.isothermal and !(s.load_MW >= 0)) return Error.Infeasible;
+    }
+
+    // Локальные утилиты для вычисления перекрытия температурного интервала.
+    const Local = struct {
+        fn overlapDeltaT(a0: f32, a1: f32, lo: f32, hi: f32) f32 {
+            const a_lo = @min(a0, a1);
+            const a_hi = @max(a0, a1);
+            const x0 = @max(a_lo, lo);
+            const x1 = @min(a_hi, hi);
+            return if (x1 > x0) (x1 - x0) else 0.0;
+        }
+    };
+
+    // 1) Собираем температурные точки (в единой шкале):
+    //    - hot: температуры как есть
+    //    - cold: температуры, сдвинутые вверх на ΔTmin
+    var temps = try std.ArrayList(f32).initCapacity(allocator, (hot_count + cold_count) * 4);
+    errdefer temps.deinit(allocator);
+
+    for (system.hot_streams) |s| {
+        try temps.append(allocator, s.in_temp_K);
+        try temps.append(allocator, s.out_temp_K);
+    }
+    for (system.cold_streams) |s| {
+        try temps.append(allocator, s.in_temp_K + dt_min);
+        try temps.append(allocator, s.out_temp_K + dt_min);
+    }
+
+    if (temps.items.len == 0) {
+        system.exchangers = try allocator.alloc(common.HeatExchanger, 0);
+        temps.deinit(allocator);
+        return;
+    }
+
+    // Сортировка по убыванию (сверху вниз).
+    std.sort.pdq(f32, temps.items, {}, lessF32Desc);
+
+    // Удаляем дубликаты.
+    var uniq = try std.ArrayList(f32).initCapacity(allocator, temps.items.len);
+    errdefer uniq.deinit(allocator);
+
+    {
+        var prev: ?f32 = null;
+        for (temps.items) |t| {
+            if (prev == null or @abs(t - prev.?) > eps) {
+                try uniq.append(allocator, t);
+                prev = t;
+            }
+        }
+    }
+
+    temps.deinit(allocator);
+
+    if (uniq.items.len < 2) {
+        system.exchangers = try allocator.alloc(common.HeatExchanger, 0);
+        uniq.deinit(allocator);
+        return;
+    }
+
+    // 2) Минимизация утилит: heat cascade по температурным интервалам (в сдвинутой шкале ΔTmin).
+    //
+    // Идея: считаем минимально необходимый внешний нагрев Q_HU так, чтобы на всех уровнях каскада
+    // "остаток тепла" не становился отрицательным. Это классическая процедура pinch/heat cascade
+    // в дискретной интерпретации по интервалам однородности.
+    //
+    // Важно: расчёт ведём по СУММАРНЫМ потокам тепла, без привязки к конкретным парам i↔j.
+    // Это даёт минимум по суммарной мощности утилит при заданном ΔTmin.
+    var hu_total: f32 = 0.0;
+    var cascade: f32 = 0.0;
+
+    {
+        var kk: usize = 0;
+        while (kk + 1 < uniq.items.len) : (kk += 1) {
+            const t_hi = uniq.items[kk];
+            const t_lo = uniq.items[kk + 1];
+            if (!(t_hi > t_lo + eps)) continue;
+
+            var hot_sum: f32 = 0.0;
+            var cold_sum: f32 = 0.0;
+
+            // Горячие: изотермы на границе t_hi + неизотермические вклады на [t_lo, t_hi]
+            for (system.hot_streams) |s| {
+                if (s.isothermal) {
+                    if (@abs(s.in_temp_K - t_hi) <= eps and s.load_MW > eps) hot_sum += s.load_MW;
+                } else {
+                    const dT = Local.overlapDeltaT(s.in_temp_K, s.out_temp_K, t_lo, t_hi);
+                    if (dT > eps) hot_sum += s.rate_MW_per_K * dT;
+                }
+            }
+
+            // Холодные: изотермы на границе t_hi (в сдвинутой шкале) + неизотермические вклады на [t_lo, t_hi]
+            for (system.cold_streams) |s| {
+                if (s.isothermal) {
+                    const t_shift = s.in_temp_K + dt_min;
+                    if (@abs(t_shift - t_hi) <= eps and s.load_MW > eps) cold_sum += s.load_MW;
+                } else {
+                    const in_s = s.in_temp_K + dt_min;
+                    const out_s = s.out_temp_K + dt_min;
+                    const dT = Local.overlapDeltaT(in_s, out_s, t_lo, t_hi);
+                    if (dT > eps) cold_sum += s.rate_MW_per_K * dT;
+                }
+            }
+
+            cascade += hot_sum - cold_sum;
+            if (cascade < -eps) {
+                hu_total += -cascade;
+                cascade = 0.0;
+            }
+        }
+
+        // Обработка изотерм на минимальной температурной границе (t_last),
+        // которые иначе могли бы "выпасть" из интервалов.
+        const t_last_cascade = uniq.items[uniq.items.len - 1];
+        var hot_tail: f32 = 0.0;
+        var cold_tail: f32 = 0.0;
+
+        for (system.hot_streams) |s| {
+            if (s.isothermal and @abs(s.in_temp_K - t_last_cascade) <= eps and s.load_MW > eps) {
+                hot_tail += s.load_MW;
+            }
+        }
+        for (system.cold_streams) |s| {
+            if (s.isothermal) {
+                const t_shift = s.in_temp_K + dt_min;
+                if (@abs(t_shift - t_last_cascade) <= eps and s.load_MW > eps) cold_tail += s.load_MW;
+            }
+        }
+
+        cascade += hot_tail - cold_tail;
+        if (cascade < -eps) {
+            hu_total += -cascade;
+            cascade = 0.0;
+        }
+    }
+
+    var hu_remaining: f32 = hu_total;
+
+    // 3) Пулы доступного тепла по горячим потокам (каскад по температуре в эквивалентной модели).
+    // Важно: тепло, накопленное на более высоких температурных уровнях, может использоваться ниже
+    // (в пределах реализуемости), поэтому этот массив живёт на всём проходе по интервалам.
+    var hot_avail = try allocator.alloc(f32, hot_count);
+    defer allocator.free(hot_avail);
+    @memset(hot_avail, 0.0);
+
+    // 4) Накопители утилит (по одному устройству на поток, чтобы не раздувать решение).
+    var heater_load = try allocator.alloc(f32, cold_count);
+    defer allocator.free(heater_load);
+    @memset(heater_load, 0.0);
+
+    var cooler_load = try allocator.alloc(f32, hot_count);
+    defer allocator.free(cooler_load);
+    @memset(cooler_load, 0.0);
+
+    // 5) Собираем получающиеся аппараты.
+    var exchangers = try std.ArrayList(common.HeatExchanger).initCapacity(allocator, 0);
+    errdefer exchangers.deinit(allocator);
+
+    // Основной проход по температурным интервалам сверху вниз (каскадирование тепла).
+    //
+    // Важно:
+    // - `hot_avail[i]` — остаток доступного тепла горячего потока i, накопленный на текущем и более высоких уровнях;
+    // - на каждом интервале мы добавляем вклад потоков, активных на этом интервале,
+    //   а затем покрываем спрос холодных потоков за счёт накопленного остатка;
+    // - дефицит покрывается ИЗ ОГРАНИЧЕННОГО ПУЛА `hu_remaining`, рассчитанного heat cascade (минимальные утилиты).
+    var k: usize = 0;
+    while (k + 1 < uniq.items.len) : (k += 1) {
+        const t_hi = uniq.items[k];
+        const t_lo = uniq.items[k + 1];
+        if (!(t_hi > t_lo + eps)) continue;
+
+        // 4.1) Добавляем доступное тепло горячих потоков в этом интервале (вклад в каскад).
+        // Изотермические горячие нагрузки на границе t_hi (точечные пакеты).
+        for (system.hot_streams, 0..) |s, i| {
+            if (!s.isothermal) continue;
+            if (@abs(s.in_temp_K - t_hi) <= eps and s.load_MW > eps) {
+                hot_avail[i] += s.load_MW;
+            }
+        }
+        // Неизотермические горячие участки: W * ΔT на перекрытии с интервалом.
+        for (system.hot_streams, 0..) |s, i| {
+            if (s.isothermal) continue;
+            const dT = Local.overlapDeltaT(s.in_temp_K, s.out_temp_K, t_lo, t_hi);
+            if (dT > eps) hot_avail[i] += s.rate_MW_per_K * dT;
+        }
+
+        // 4.2) Спрос холодных потоков на этом интервале (в сдвинутой шкале).
+        var cold_demand = try allocator.alloc(f32, cold_count);
+        defer allocator.free(cold_demand);
+        @memset(cold_demand, 0.0);
+
+        // Изотермические холодные нагрузки (точечные пакеты в t_hi с учётом сдвига).
+        for (system.cold_streams, 0..) |s, j| {
+            if (!s.isothermal) continue;
+            const t_shift = s.in_temp_K + dt_min;
+            if (@abs(t_shift - t_hi) <= eps and s.load_MW > eps) {
+                cold_demand[j] += s.load_MW;
+            }
+        }
+        // Неизотермические холодные участки: W * ΔT на перекрытии с интервалом (в сдвинутой шкале).
+        for (system.cold_streams, 0..) |s, j| {
+            if (s.isothermal) continue;
+            const in_s = s.in_temp_K + dt_min;
+            const out_s = s.out_temp_K + dt_min;
+            const dT = Local.overlapDeltaT(in_s, out_s, t_lo, t_hi);
+            if (dT > eps) cold_demand[j] += s.rate_MW_per_K * dT;
+        }
+
+        // 4.3) Распределение тепла (детерминированно): покрываем спрос из hot_avail.
+        // Важно: `hot_ptr` сбрасываем на каждом интервале, иначе можно пропустить поток,
+        // который "включился" (стал активным) на более низком уровне, но имеет меньший индекс.
+        var hot_ptr: usize = 0;
+
+        for (cold_demand, 0..) |_, j| {
+            var d = cold_demand[j];
+            if (!(d > eps)) continue;
+
+            while (d > eps) {
+                while (hot_ptr < hot_count and !(hot_avail[hot_ptr] > eps)) : (hot_ptr += 1) {}
+                if (hot_ptr >= hot_count) break;
+
+                const q = @min(d, hot_avail[hot_ptr]);
+                if (q <= eps) break;
+
+                try exchangers.append(allocator, .{
+                    .hot_end = @intCast(hot_ptr),
+                    .cold_end = @intCast(j),
+                    .load_MW = q,
+                });
+
+                hot_avail[hot_ptr] -= q;
+                d -= q;
+            }
+
+            if (d > eps) {
+                // Дефицит тепла на этом температурном уровне: покрываем внешним нагревом (hot utility).
+                // Для минимума утилит используем заранее рассчитанный пул `hu_remaining`.
+                const q_hu = @min(d, hu_remaining);
+                if (q_hu > eps) {
+                    heater_load[j] += q_hu;
+                    hu_remaining -= q_hu;
+                    d -= q_hu;
+                }
+                // Если после использования пула дефицит всё ещё есть — значит, входные данные/сдвиг
+                // или расчёт каскада несовместимы с текущей процедурой синтеза.
+                if (d > 1e-4) return Error.Infeasible;
+            }
+        }
+    }
+
+    // 4.4) Корректный учёт изотермических пакетов на минимальной температурной границе.
+    // Ранее такие изотермы могли выпадать из рассмотрения, потому что t_last не является t_hi ни для одного интервала.
+    const t_last = uniq.items[uniq.items.len - 1];
+
+    // Добавляем изотермические горячие нагрузки на t_last.
+    for (system.hot_streams, 0..) |s, i| {
+        if (!s.isothermal) continue;
+        if (@abs(s.in_temp_K - t_last) <= eps and s.load_MW > eps) {
+            hot_avail[i] += s.load_MW;
+        }
+    }
+
+    // Закрываем возможные изотермические холодные нагрузки на t_last (в сдвинутой шкале).
+    var cold_tail = try allocator.alloc(f32, cold_count);
+    defer allocator.free(cold_tail);
+    @memset(cold_tail, 0.0);
+
+    for (system.cold_streams, 0..) |s, j| {
+        if (!s.isothermal) continue;
+        const t_shift = s.in_temp_K + dt_min;
+        if (@abs(t_shift - t_last) <= eps and s.load_MW > eps) {
+            cold_tail[j] += s.load_MW;
+        }
+    }
+
+    var hot_ptr_tail: usize = 0;
+    for (cold_tail, 0..) |_, j| {
+        var d = cold_tail[j];
+        if (!(d > eps)) continue;
+
+        while (d > eps) {
+            while (hot_ptr_tail < hot_count and !(hot_avail[hot_ptr_tail] > eps)) : (hot_ptr_tail += 1) {}
+            if (hot_ptr_tail >= hot_count) break;
+
+            const q = @min(d, hot_avail[hot_ptr_tail]);
+            if (q <= eps) break;
+
+            try exchangers.append(allocator, .{
+                .hot_end = @intCast(hot_ptr_tail),
+                .cold_end = @intCast(j),
+                .load_MW = q,
+            });
+
+            hot_avail[hot_ptr_tail] -= q;
+            d -= q;
+        }
+
+        if (d > eps) {
+            const q_hu = @min(d, hu_remaining);
+            if (q_hu > eps) {
+                heater_load[j] += q_hu;
+                hu_remaining -= q_hu;
+                d -= q_hu;
+            }
+            if (d > 1e-4) return Error.Infeasible;
+        }
+    }
+
+    // 4.5) Остаток горячего тепла после каскада отправляем в охлаждение (cold utility) по соответствующим hot-потокам.
+    // Если heat cascade посчитан корректно, суммарная мощность cold utility будет минимальной (при данном ΔTmin).
+    for (hot_avail, 0..) |q_left, i| {
+        if (q_left > eps) cooler_load[i] += q_left;
+    }
+
+    // 5) Добавляем утилиты в виде односторонних аппаратов.
+    for (heater_load, 0..) |q, j| {
+        if (!(q > eps)) continue;
+        try exchangers.append(allocator, .{
+            .hot_end = null,
+            .cold_end = @intCast(j),
+            .load_MW = q,
+        });
+    }
+    for (cooler_load, 0..) |q, i| {
+        if (!(q > eps)) continue;
+        try exchangers.append(allocator, .{
+            .hot_end = @intCast(i),
+            .cold_end = null,
+            .load_MW = q,
+        });
+    }
+
+    // 7) Компактизация: суммируем одинаковые пары (hot_end, cold_end),
+    // чтобы уменьшить число элементов решения.
+    const Cmp = struct {
+        fn keyOpt(v: ?u16) u16 {
+            return v orelse 0xFFFF;
+        }
+        fn less(_: void, a: common.HeatExchanger, b: common.HeatExchanger) bool {
+            const ah = keyOpt(a.hot_end);
+            const bh = keyOpt(b.hot_end);
+            if (ah != bh) return ah < bh;
+            const ac = keyOpt(a.cold_end);
+            const bc = keyOpt(b.cold_end);
+            return ac < bc;
+        }
+        fn same(a: common.HeatExchanger, b: common.HeatExchanger) bool {
+            return (keyOpt(a.hot_end) == keyOpt(b.hot_end)) and (keyOpt(a.cold_end) == keyOpt(b.cold_end));
+        }
+    };
+
+    std.sort.pdq(common.HeatExchanger, exchangers.items, {}, Cmp.less);
+
+    var compact = try std.ArrayList(common.HeatExchanger).initCapacity(allocator, exchangers.items.len);
+    errdefer compact.deinit(allocator);
+
+    for (exchangers.items) |ex| {
+        if (!(ex.load_MW > eps)) continue;
+
+        if (compact.items.len == 0) {
+            try compact.append(allocator, ex);
+            continue;
+        }
+
+        const last_idx = compact.items.len - 1;
+        if (Cmp.same(compact.items[last_idx], ex)) {
+            compact.items[last_idx].load_MW += ex.load_MW;
+        } else {
+            try compact.append(allocator, ex);
+        }
+    }
+
+    exchangers.deinit(allocator);
+    uniq.deinit(allocator);
+
+    system.exchangers = try compact.toOwnedSlice(allocator);
+}
+
 // Проверка баланса готового решения: суммарные тепловые нагрузки горячей и холодной подсистем должны совпадать.
 pub fn verifySolution(allocator: std.mem.Allocator, system: *const common.HeatSystem) !void {
     _ = allocator;
