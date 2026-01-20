@@ -43,6 +43,7 @@ import {
 import { renderDescriptionHtml } from "../render/description.js";
 import { renderTables } from "../render/tables.js";
 import { solveGreedyJs } from "../solver/solve_greedy_js.js";
+import { solveCurvesJs } from "../solver/solve_curves_js.js";
 
 /**
  * Основной модуль приложения: связывает UI, состояние, представления и Zig/WASM.
@@ -50,10 +51,8 @@ import { solveGreedyJs } from "../solver/solve_greedy_js.js";
 
 // --- Синтез на чистом JavaScript ---
 //
-// Реализация жадного алгоритма вынесена в `../solver/solve_greedy_js.js`.
-// Здесь используем импорт `solveGreedyJs()`.
-//
-// (Преимущество: app.js не разрастается, алгоритм можно тестировать/сравнивать отдельно.)
+// Реализации алгоритмов на JS находятся в `../solver/*_js.js`.
+// Здесь используются импорты `solveGreedyJs` и `solveCurvesJs`.
 
 const setUiEnabled = (ui, enabled) => {
   const allButtons = [...Object.values(ui.buttons), ...Object.values(ui.tabs)];
@@ -329,13 +328,21 @@ export const startApp = async () => {
       const s = String(v ?? "").trim();
       if (!s) return "solve_greedy_zig";
 
-      // Если уже новый формат — как есть.
-      if (s.endsWith("_zig") || s.endsWith("_js")) return s;
+      // Если уже новый формат — как есть (но только для формата `solve_*_(zig|js)`).
+      if ((s.endsWith("_zig") || s.endsWith("_js")) && s.startsWith("solve_"))
+        return s;
 
       // Старые значения селектора → считаем Zig/WASM.
       if (s === "solve_greedy") return "solve_greedy_zig";
       if (s === "solve_curves") return "solve_curves_zig";
       if (s === "solve_trivial") return "solve_trivial_zig";
+
+      // Старые/экспериментальные значения без префикса `solve_`.
+      if (s === "greedy_zig") return "solve_greedy_zig";
+      if (s === "curves_zig") return "solve_curves_zig";
+      if (s === "trivial_zig") return "solve_trivial_zig";
+      if (s === "greedy_js") return "solve_greedy_js";
+      if (s === "curves_js") return "solve_curves_js";
 
       // Фолбэк: тоже Zig/WASM.
       return `${s}_zig`;
@@ -355,6 +362,7 @@ export const startApp = async () => {
       else if (a === "curves_zig") store.solverAlgorithmId = "solve_curves_zig";
       else if (a === "greedy_zig") store.solverAlgorithmId = "solve_greedy_zig";
       else if (a === "greedy_js") store.solverAlgorithmId = "solve_greedy_js";
+      else if (a === "curves_js") store.solverAlgorithmId = "solve_curves_js";
       else store.solverAlgorithmId = "solve_greedy_zig";
     }
 
@@ -701,11 +709,18 @@ export const startApp = async () => {
       const normalizeAlgoId = (v) => {
         const s = String(v ?? "").trim();
         if (!s) return "solve_greedy_zig";
-        if (s.endsWith("_zig") || s.endsWith("_js")) return s;
+        if ((s.endsWith("_zig") || s.endsWith("_js")) && s.startsWith("solve_"))
+          return s;
 
         if (s === "solve_greedy") return "solve_greedy_zig";
         if (s === "solve_curves") return "solve_curves_zig";
         if (s === "solve_trivial") return "solve_trivial_zig";
+
+        if (s === "greedy_zig") return "solve_greedy_zig";
+        if (s === "curves_zig") return "solve_curves_zig";
+        if (s === "trivial_zig") return "solve_trivial_zig";
+        if (s === "greedy_js") return "solve_greedy_js";
+        if (s === "curves_js") return "solve_curves_js";
 
         return `${s}_zig`;
       };
@@ -761,15 +776,26 @@ export const startApp = async () => {
 
       // Выполнение синтеза
       if (provider === "js") {
-        if (baseName !== "solve_greedy") {
+        if (baseName === "solve_greedy") {
+          nextExchangers = solveGreedyJs(store.state, { min_dt: 20 });
+        } else if (baseName === "solve_curves") {
+          try {
+            nextExchangers = solveCurvesJs(store.state, { min_dt: 20 });
+          } catch (e) {
+            logError("Синтез (solve_curves_js) завершился с ошибкой", e);
+            setStatus(
+              "err",
+              "Не удалось синтезировать систему (JavaScript): задача неразрешима или входные данные некорректны. Подробности в консоли браузера.",
+            );
+            return;
+          }
+        } else {
           setStatus(
             "err",
             "Невозможно синтезировать: выбранный алгоритм JavaScript пока не реализован.",
           );
           return;
         }
-
-        nextExchangers = solveGreedyJs(store.state, { min_dt: 20 });
       } else {
         const solveFn =
           baseName === "solve_trivial"

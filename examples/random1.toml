@@ -1,0 +1,804 @@
+[multiheat]
+version = "0.0.1"
+temp_unit = "K"
+
+[stats]
+total_load_hot = 150.32505
+total_load_cold = 86.20563
+load_diff = -64.11942
+algorithm_used = "solve_greedy_js"
+cell_count = 133
+utility_count = 1
+total_load_cells = 86.20563
+total_load_utilities = 64.11942
+external_power_saved = 172.41126
+
+[[hot]]
+in = 433.37
+out = 412.73
+load = 2.0527
+
+[[hot]]
+in = 430.09
+out = 412.92
+load = 0.76549
+
+[[hot]]
+in = 445.57
+out = 420.88
+load = 2.7612
+
+[[hot]]
+in = 403.31
+load = 0.77093
+
+[[hot]]
+in = 440.02
+load = 2.7074
+
+[[hot]]
+in = 462.91
+load = 0.35016
+
+[[hot]]
+in = 426.71
+out = 397.43
+load = 0.96698
+
+[[hot]]
+in = 455.62
+load = 1.8433
+
+[[hot]]
+in = 454.79
+out = 425.21
+load = 1.8377
+
+[[hot]]
+in = 452.23
+load = 1.7114
+
+[[hot]]
+in = 455.87
+out = 418.1
+load = 0.59827
+
+[[hot]]
+in = 462.94
+out = 444.51
+load = 1.6397
+
+[[hot]]
+in = 428.18
+out = 382.61
+load = 2.0221
+
+[[hot]]
+in = 447.65
+load = 1.743
+
+[[hot]]
+in = 460.97
+out = 439.67
+load = 1.7957
+
+[[hot]]
+in = 475.63
+out = 438.01
+load = 2.6899
+
+[[hot]]
+in = 435.78
+out = 404.43
+load = 0.76911
+
+[[hot]]
+in = 447.95
+load = 0.8743
+
+[[hot]]
+in = 463.09
+out = 437.44
+load = 1.1111
+
+[[hot]]
+in = 449.91
+load = 2.1538
+
+[[hot]]
+in = 431.49
+load = 2.9802
+
+[[hot]]
+in = 407.52
+out = 390.54
+load = 0.47077
+
+[[hot]]
+in = 465.55
+out = 420.33
+load = 0.59074
+
+[[hot]]
+in = 437.71
+out = 416.58
+load = 0.73771
+
+[[hot]]
+in = 475.42
+out = 443.78
+load = 1.9506
+
+[[hot]]
+in = 480.03
+load = 1.2696
+
+[[hot]]
+in = 462.14
+load = 2.4048
+
+[[hot]]
+in = 473.06
+out = 445.36
+load = 1.4448
+
+[[hot]]
+in = 415.14
+out = 381.62
+load = 1.2998
+
+[[hot]]
+in = 430.46
+load = 2.6078
+
+[[hot]]
+in = 447.05
+load = 2.9881
+
+[[hot]]
+in = 466.66
+out = 445
+load = 0.67599
+
+[[hot]]
+in = 472.61
+out = 430.51
+load = 2.3593
+
+[[hot]]
+in = 441.29
+load = 2.8724
+
+[[hot]]
+in = 450.39
+out = 413.24
+load = 0.94522
+
+[[hot]]
+in = 430.41
+out = 410.73
+load = 2.5335
+
+[[hot]]
+in = 464.33
+load = 1.6614
+
+[[hot]]
+in = 454.91
+load = 0.56559
+
+[[hot]]
+in = 454.02
+out = 430.25
+load = 0.43621
+
+[[hot]]
+in = 474.97
+out = 438.97
+load = 2.1006
+
+[[hot]]
+in = 455.72
+load = 0.63588
+
+[[hot]]
+in = 435.67
+load = 1.0074
+
+[[hot]]
+in = 455.94
+out = 442.58
+load = 0.3287
+
+[[hot]]
+in = 458.31
+out = 428.43
+load = 1.5273
+
+[[hot]]
+in = 491.58
+out = 466.81
+load = 0.32954
+
+[[hot]]
+in = 430.19
+out = 380.45
+load = 0.97701
+
+[[hot]]
+in = 447
+out = 415.9
+load = 0.99361
+
+[[hot]]
+in = 445.38
+out = 419.32
+load = 2.5474
+
+[[hot]]
+in = 449.68
+load = 2.0924
+
+[[hot]]
+in = 446.7
+out = 413.43
+load = 0.63126
+
+[[hot]]
+in = 429.62
+out = 394.16
+load = 2.6149
+
+[[hot]]
+in = 430.07
+load = 0.75711
+
+[[hot]]
+in = 424.18
+out = 395.6
+load = 0.82109
+
+[[hot]]
+in = 459.55
+out = 419
+load = 1.1347
+
+[[hot]]
+in = 441.77
+load = 0.66496
+
+[[hot]]
+in = 442.21
+out = 406.45
+load = 2.5254
+
+[[hot]]
+in = 475.85
+load = 1.3376
+
+[[hot]]
+in = 426.18
+load = 2.4755
+
+[[hot]]
+in = 471
+load = 1.6011
+
+[[hot]]
+in = 457.92
+out = 437.96
+load = 0.28144
+
+[[hot]]
+in = 423.87
+out = 389.82
+load = 2.889
+
+[[hot]]
+in = 422.38
+out = 395.82
+load = 1.2005
+
+[[hot]]
+in = 462.87
+out = 437.01
+load = 2.3723
+
+[[hot]]
+in = 413.31
+out = 396.03
+load = 0.54797
+
+[[hot]]
+in = 405.89
+out = 368.96
+load = 0.93392
+
+[[hot]]
+in = 450.2
+load = 1.1772
+
+[[hot]]
+in = 431.9
+out = 404
+load = 0.20728
+
+[[hot]]
+in = 453
+load = 2.3935
+
+[[hot]]
+in = 461.01
+load = 2.4478
+
+[[hot]]
+in = 430.85
+load = 0.56071
+
+[[hot]]
+in = 460.26
+load = 0.38484
+
+[[hot]]
+in = 479.39
+out = 453.52
+load = 0.24862
+
+[[hot]]
+in = 485.49
+out = 453.44
+load = 1.6941
+
+[[hot]]
+in = 454.79
+out = 426.66
+load = 2.6328
+
+[[hot]]
+in = 468.71
+load = 0.88433
+
+[[hot]]
+in = 509.8
+load = 2.531
+
+[[hot]]
+in = 464.87
+load = 1.141
+
+[[hot]]
+in = 445.32
+load = 2.0014
+
+[[hot]]
+in = 465.35
+out = 441.54
+load = 1.8155
+
+[[hot]]
+in = 409.26
+load = 1.4922
+
+[[hot]]
+in = 432.57
+out = 411.59
+load = 0.44689
+
+[[hot]]
+in = 424.95
+out = 374.64
+load = 1.7293
+
+[[hot]]
+in = 479.89
+load = 1.5169
+
+[[hot]]
+in = 453.09
+load = 0.38655
+
+[[hot]]
+in = 423.1
+out = 395.14
+load = 2.247
+
+[[hot]]
+in = 430.79
+out = 381.2
+load = 1.0804
+
+[[hot]]
+in = 447.59
+out = 430.62
+load = 0.9771
+
+[[hot]]
+in = 451.92
+load = 2.5426
+
+[[hot]]
+in = 427.12
+out = 398.4
+load = 2.4847
+
+[[hot]]
+in = 447.18
+out = 426.13
+load = 2.346
+
+[[hot]]
+in = 467.98
+out = 422.36
+load = 2.9687
+
+[[hot]]
+in = 414.19
+out = 366.75
+load = 2.3143
+
+[[hot]]
+in = 451.27
+load = 0.42962
+
+[[hot]]
+in = 467.81
+out = 438.16
+load = 1.5114
+
+[[hot]]
+in = 437.45
+load = 2.6645
+
+[[hot]]
+in = 455.57
+out = 421.76
+load = 0.75637
+
+[[hot]]
+in = 465.79
+load = 1.4371
+
+[[hot]]
+in = 455.26
+load = 0.70679
+
+[[hot]]
+in = 446.48
+out = 395.74
+load = 2.2591
+
+[[hot]]
+in = 441.95
+load = 0.62009
+
+[[cold]]
+in = 327.15
+out = 355.07
+load = 1.8309
+
+[[cold]]
+in = 333.9
+load = 2.1858
+
+[[cold]]
+in = 322.15
+out = 343.51
+load = 0.70433
+
+[[cold]]
+in = 313.14
+out = 337.14
+load = 1.5019
+
+[[cold]]
+in = 311.9
+out = 333.67
+load = 1.5074
+
+[[cold]]
+in = 322.15
+out = 354.11
+load = 1.0736
+
+[[cold]]
+in = 308.66
+load = 0.11624
+
+[[cold]]
+in = 290.33
+out = 351.46
+load = 1.0826
+
+[[cold]]
+in = 291.75
+out = 332.29
+load = 0.49968
+
+[[cold]]
+in = 307.57
+out = 320.48
+load = 1.7747
+
+[[cold]]
+in = 301.56
+load = 1.2648
+
+[[cold]]
+in = 341.12
+load = 1.0509
+
+[[cold]]
+in = 342.97
+out = 354.97
+load = 1.6607
+
+[[cold]]
+in = 308.68
+out = 346.87
+load = 0.7737
+
+[[cold]]
+in = 281.97
+load = 0.88824
+
+[[cold]]
+in = 314.74
+load = 0.57741
+
+[[cold]]
+in = 310.82
+out = 338.83
+load = 0.75202
+
+[[cold]]
+in = 313.67
+out = 344.81
+load = 0.97648
+
+[[cold]]
+in = 331.43
+load = 0.7325
+
+[[cold]]
+in = 317.53
+out = 359.03
+load = 1.6776
+
+[[cold]]
+in = 342.05
+load = 1.8176
+
+[[cold]]
+in = 321.38
+load = 1.3162
+
+[[cold]]
+in = 283.97
+out = 324.14
+load = 1.0164
+
+[[cold]]
+in = 305.49
+load = 1.216
+
+[[cold]]
+in = 333.58
+out = 373.86
+load = 1.4145
+
+[[cold]]
+in = 303.75
+out = 352.33
+load = 1.1558
+
+[[cold]]
+in = 336.08
+out = 357.65
+load = 1.1018
+
+[[cold]]
+in = 298.35
+load = 0.71427
+
+[[cold]]
+in = 327.04
+out = 357.99
+load = 0.88728
+
+[[cold]]
+in = 310.22
+load = 1.3649
+
+[[cold]]
+in = 323.86
+out = 348.71
+load = 1.1115
+
+[[cold]]
+in = 338.58
+load = 0.68192
+
+[[cold]]
+in = 284.34
+out = 322.77
+load = 1.0601
+
+[[cold]]
+in = 333.14
+out = 363.41
+load = 0.84532
+
+[[cold]]
+in = 295.57
+load = 1.0168
+
+[[cold]]
+in = 298.89
+load = 1.7805
+
+[[cold]]
+in = 315.45
+load = 1.0571
+
+[[cold]]
+in = 309.22
+out = 331.83
+load = 1.1569
+
+[[cold]]
+in = 312.3
+out = 351.95
+load = 1.3811
+
+[[cold]]
+in = 342.18
+out = 374.6
+load = 1.5254
+
+[[cold]]
+in = 337.4
+load = 0.7593
+
+[[cold]]
+in = 326.24
+load = 0.91957
+
+[[cold]]
+in = 317.12
+load = 1.0359
+
+[[cold]]
+in = 316.03
+out = 356.45
+load = 1.4014
+
+[[cold]]
+in = 329.49
+out = 361.11
+load = 0.073817
+
+[[cold]]
+in = 344.91
+out = 376
+load = 1.3541
+
+[[cold]]
+in = 323.95
+load = 1.6924
+
+[[cold]]
+in = 342.5
+load = 1.5947
+
+[[cold]]
+in = 326.04
+out = 347.25
+load = 0.47519
+
+[[cold]]
+in = 316.97
+load = 1.9077
+
+[[cold]]
+in = 333.96
+out = 362.7
+load = 1.2885
+
+[[cold]]
+in = 298.36
+out = 321.42
+load = 2.3588
+
+[[cold]]
+in = 316.59
+out = 351.13
+load = 1.9466
+
+[[cold]]
+in = 326
+load = 1.5121
+
+[[cold]]
+in = 320.51
+out = 355.56
+load = 1.7079
+
+[[cold]]
+in = 327.6
+out = 357.02
+load = 1.8611
+
+[[cold]]
+in = 325.16
+out = 371.07
+load = 1.084
+
+[[cold]]
+in = 303.77
+load = 2.3653
+
+[[cold]]
+in = 281.02
+out = 318.06
+load = 1.5426
+
+[[cold]]
+in = 338.04
+out = 367.64
+load = 1.5349
+
+[[cold]]
+in = 349.56
+out = 389.4
+load = 0.91685
+
+[[cold]]
+in = 305.16
+load = 1.3508
+
+[[cold]]
+in = 334.81
+out = 370.7
+load = 1.2718
+
+[[cold]]
+in = 314.11
+out = 339.35
+load = 0.61904
+
+[[cold]]
+in = 305.06
+out = 355.92
+load = 1.6914
+
+[[cold]]
+in = 314.42
+out = 329.79
+load = 1.384
+
+[[cold]]
+in = 321.03
+out = 354.54
+load = 0.81956
+
+[[cold]]
+in = 306.42
+load = 0.087223
+
+[[cold]]
+in = 352.53
+out = 390.44
+load = 0.79653
+
+[[cold]]
+in = 356.32
+load = 0.71466
+
+[[cold]]
+in = 298.45
+out = 338.56
+load = 1.0908
+
+[[cold]]
+in = 327.04
+load = 0.7942

@@ -13,9 +13,9 @@ import { defaultState } from "../model/state.js";
  * @param {boolean} [opts.visualizationEnabled] Включена ли визуализация (по умолчанию `false`)
  * @param {boolean} [opts.eqCurvesEnabled] Включены ли эквивалентные кривые (по умолчанию `false`)
  * @param {boolean} [opts.settingsEnabled] Включена ли панель «Настройки» (по умолчанию `false`)
- * @param {"solve_greedy_zig"|"solve_greedy_js"|"solve_curves_zig"|"solve_trivial_zig"} [opts.solverAlgorithmId] Выбранный алгоритм синтеза (по умолчанию `"solve_greedy_zig"`)
+ * @param {"solve_greedy_zig"|"solve_greedy_js"|"solve_curves_zig"|"solve_curves_js"|"solve_trivial_zig"} [opts.solverAlgorithmId] Выбранный алгоритм синтеза (по умолчанию `"solve_greedy_zig"`)
  * @param {"greedy"|"curves"|"trivial"} [opts.solverAlgorithm] Устаревшее поле (для обратной совместимости)
- * @returns {{ state: any, activeTab: string, viewsSuspended: boolean, visualizationEnabled: boolean, eqCurvesEnabled: boolean, settingsEnabled: boolean, solverAlgorithmId: "solve_greedy_zig"|"solve_greedy_js"|"solve_curves_zig"|"solve_trivial_zig", solverAlgorithm: "greedy"|"curves"|"trivial", dirty: { toml: boolean, csvStreams: boolean, csvSolution: boolean } }}
+ * @returns {{ state: any, activeTab: string, viewsSuspended: boolean, visualizationEnabled: boolean, eqCurvesEnabled: boolean, settingsEnabled: boolean, solverAlgorithmId: "solve_greedy_zig"|"solve_greedy_js"|"solve_curves_zig"|"solve_curves_js"|"solve_trivial_zig", solverAlgorithm: "greedy"|"curves"|"trivial", dirty: { toml: boolean, csvStreams: boolean, csvSolution: boolean } }}
  */
 export const createStore = (opts = {}) => {
   const initialState = opts.state ?? defaultState();
@@ -27,6 +27,7 @@ export const createStore = (opts = {}) => {
     v === "solve_greedy_zig" ||
     v === "solve_greedy_js" ||
     v === "solve_curves_zig" ||
+    v === "solve_curves_js" ||
     v === "solve_trivial_zig";
 
   // Миграция старых значений (из предыдущих версий UI/хранилища) в новый идентификатор solve_*_(zig|js).
@@ -41,6 +42,7 @@ export const createStore = (opts = {}) => {
     if (s === "greedy_zig") return "solve_greedy_zig";
     if (s === "greedy_js") return "solve_greedy_js";
     if (s === "curves_zig") return "solve_curves_zig";
+    if (s === "curves_js") return "solve_curves_js";
     if (s === "trivial_zig") return "solve_trivial_zig";
 
     // Ещё более старый формат (без указания провайдера) — считаем Zig/WASM
