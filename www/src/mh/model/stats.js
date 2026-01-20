@@ -86,11 +86,15 @@ export const computeExternalBaselineMW = (state) => {
  * @param {any} state каноническое состояние ({ hot, cold, exchanger })
  * @param {object} [opts]
  * @param {string|null} [opts.algorithm_used] имя функции Zig (например "solve_greedy")
+ * @param {string|null} [opts.algorithm_label] человекочитаемое имя алгоритма (например "Жадный")
+ * @param {number|null} [opts.solve_time_ms] время синтеза (мс)
  * @returns {{
  *   total_load_hot: number,
  *   total_load_cold: number,
  *   load_diff: number,
  *   algorithm_used: string|null,
+ *   algorithm_label: string|null,
+ *   solve_time_ms: number|null,
  *   cell_count: number,
  *   utility_count: number,
  *   total_load_cells: number,
@@ -142,6 +146,11 @@ export const computeSolutionStats = (state, opts = {}) => {
     total_load_cold: totalCold,
     load_diff: loadDiff,
     algorithm_used: opts.algorithm_used ?? null,
+    algorithm_label: opts.algorithm_label ?? null,
+    solve_time_ms:
+      opts.solve_time_ms === null || opts.solve_time_ms === undefined
+        ? null
+        : toFiniteNumberOr(opts.solve_time_ms, null),
     cell_count: cellCount,
     utility_count: utilCount,
     total_load_cells: qCells,
@@ -161,10 +170,24 @@ export const formatStatsForDescription = (stats) => {
 
   const lines = [];
 
-  const algo =
-    stats.algorithm_used && String(stats.algorithm_used).trim().length > 0
-      ? String(stats.algorithm_used)
+  const humanizeAlgorithm = (algorithmUsed) => {
+    const a = algorithmUsed ? String(algorithmUsed).trim() : "";
+    if (!a) return null;
+
+    if (a === "solve_greedy") return "Жадный";
+    if (a === "solve_curves") return "Эквивалентные кривые";
+    if (a === "solve_trivial") return "Без теплообмена";
+
+    // Фолбэк: показываем исходную строку.
+    return a;
+  };
+
+  const algoLabelRaw =
+    stats.algorithm_label && String(stats.algorithm_label).trim().length > 0
+      ? String(stats.algorithm_label).trim()
       : null;
+
+  const algoLabel = algoLabelRaw ?? humanizeAlgorithm(stats.algorithm_used);
 
   const totalHot = toFiniteNumberOr(stats.total_load_hot, 0);
   const totalCold = toFiniteNumberOr(stats.total_load_cold, 0);
@@ -177,6 +200,18 @@ export const formatStatsForDescription = (stats) => {
   const qUtils = toFiniteNumberOr(stats.total_load_utilities, 0);
 
   const saved = toFiniteNumberOr(stats.external_power_saved, 0);
+
+  // Важно: `Number(null) === 0`, поэтому нельзя прогонять null через toFiniteNumberOr,
+  // иначе будет ложное "0 мс" даже когда время отсутствует.
+  const solveTimeMsRaw =
+    stats.solve_time_ms === null || stats.solve_time_ms === undefined
+      ? NaN
+      : toFiniteNumberOr(stats.solve_time_ms, NaN);
+
+  const solveTimeMs =
+    Number.isFinite(solveTimeMsRaw) && solveTimeMsRaw >= 0
+      ? Math.round(solveTimeMsRaw)
+      : null;
 
   lines.push(`Суммарная нагрузка горячих потоков: ${fmtNum(totalHot)} МВт.`);
 
@@ -194,7 +229,10 @@ export const formatStatsForDescription = (stats) => {
     `Экономия внешней энергии относительно режима «Без теплообмена»: ${fmtNum(saved)} МВт.`,
   );
 
-  if (algo) lines.push(`Алгоритм: ${algo}.`);
+  if (algoLabel) lines.push(`Алгоритм: ${algoLabel}.`);
+
+  // Требование: время синтеза выводим последней строкой (точность до мс).
+  if (solveTimeMs !== null) lines.push(`Время синтеза: ${solveTimeMs} мс.`);
 
   return lines;
 };

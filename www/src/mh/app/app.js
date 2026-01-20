@@ -679,6 +679,28 @@ export const startApp = async () => {
             ? "solve_curves"
             : "solve_greedy";
 
+      const humanAlgo = (() => {
+        // Берём человекочитаемое имя из селектора алгоритмов (как в UI),
+        // чтобы статистика всегда совпадала с текущими подписями в настройках.
+        const sel = ui?.settings?.algorithmSelect ?? null;
+        if (sel && sel instanceof HTMLSelectElement) {
+          const opt =
+            (sel.selectedOptions && sel.selectedOptions[0]) ||
+            sel.options?.[sel.selectedIndex] ||
+            null;
+
+          const label = opt ? String(opt.textContent ?? "").trim() : "";
+          if (label) return label;
+        }
+
+        // Фолбэк (на случай отсутствия селектора/опции).
+        return algo === "trivial"
+          ? "Без теплообмена"
+          : algo === "curves"
+            ? "Эквивалентные кривые"
+            : "Жадный";
+      })();
+
       if (typeof solveFn !== "function") {
         const human =
           algo === "trivial"
@@ -693,6 +715,14 @@ export const startApp = async () => {
         return;
       }
 
+      const nowMs =
+        typeof performance !== "undefined" &&
+        typeof performance.now === "function"
+          ? () => performance.now()
+          : () => Date.now();
+
+      const t0 = nowMs();
+
       try {
         solveFn(system);
       } catch (e) {
@@ -704,6 +734,8 @@ export const startApp = async () => {
         return;
       }
 
+      const solveTimeMs = Math.round(nowMs() - t0);
+
       const zigExList = dumpExchangersFromZig(system.exchangers);
       const next = {
         ...store.state,
@@ -713,6 +745,8 @@ export const startApp = async () => {
       const normalized = validateAndNormalizeState(next);
       const stats = computeSolutionStats(normalized, {
         algorithm_used: usedName,
+        algorithm_label: humanAlgo,
+        solve_time_ms: solveTimeMs,
       });
 
       store.state = { ...normalized, stats };
