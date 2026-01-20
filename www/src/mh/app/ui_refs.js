@@ -69,6 +69,39 @@ export const buildUiRefs = (root = document) => {
 
     testMode: {
       algorithmSelect: qOpt("#selAlgorithm"),
+
+      // Генератор случайных систем (элементы могут отсутствовать, если панель ещё не дорисована).
+      generator: {
+        hot: {
+          count: qOpt("#genHotCount"),
+          isoPct: qOpt("#genHotIsoShare"),
+          tempDist: qOpt("#genHotTempDist"),
+          tempMin: qOpt("#genHotTempMin"),
+          tempMax: qOpt("#genHotTempMax"),
+          tempMean: qOpt("#genHotTempMean"),
+          tempVar: qOpt("#genHotTempVar"),
+          loadDist: qOpt("#genHotLoadDist"),
+          loadMin: qOpt("#genHotLoadMin"),
+          loadMax: qOpt("#genHotLoadMax"),
+          loadMean: qOpt("#genHotLoadMean"),
+          loadVar: qOpt("#genHotLoadVar"),
+        },
+        cold: {
+          count: qOpt("#genColdCount"),
+          isoPct: qOpt("#genColdIsoShare"),
+          tempDist: qOpt("#genColdTempDist"),
+          tempMin: qOpt("#genColdTempMin"),
+          tempMax: qOpt("#genColdTempMax"),
+          tempMean: qOpt("#genColdTempMean"),
+          tempVar: qOpt("#genColdTempVar"),
+          loadDist: qOpt("#genColdLoadDist"),
+          loadMin: qOpt("#genColdLoadMin"),
+          loadMax: qOpt("#genColdLoadMax"),
+          loadMean: qOpt("#genColdLoadMean"),
+          loadVar: qOpt("#genColdLoadVar"),
+        },
+        generateButton: qOpt("#btnGenerate"),
+      },
     },
 
     description: {

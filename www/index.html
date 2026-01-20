@@ -185,6 +185,433 @@
                             </option>
                         </select>
                     </div>
+
+                    <hr class="mh-testDivider" aria-hidden="true" />
+
+                    <div
+                        class="mh-genPanel"
+                        aria-label="Генератор случайных систем"
+                    >
+                        <div class="mh-genSides" aria-label="Параметры потоков">
+                            <fieldset
+                                class="mh-genSide"
+                                aria-label="Параметры горячих потоков"
+                            >
+                                <legend>Горячие потоки</legend>
+
+                                <div class="mh-genField">
+                                    <label for="genHotCount"
+                                        >Количество потоков</label
+                                    >
+                                    <input
+                                        id="genHotCount"
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        value="10"
+                                    />
+                                </div>
+
+                                <div class="mh-genField">
+                                    <label for="genHotIsoShare"
+                                        >Доля изотермических</label
+                                    >
+                                    <input
+                                        id="genHotIsoShare"
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        value="50"
+                                    />
+                                    <output
+                                        id="genHotIsoShareOut"
+                                        for="genHotIsoShare"
+                                        >50%</output
+                                    >
+                                </div>
+
+                                <fieldset
+                                    class="mh-genGroup"
+                                    aria-label="Распределение температур (горячие)"
+                                >
+                                    <legend>Распределение температур</legend>
+
+                                    <div class="mh-genField">
+                                        <label for="genHotTempDist"
+                                            >Тип распределения</label
+                                        >
+                                        <select id="genHotTempDist">
+                                            <option value="uniform" selected>
+                                                Равномерное
+                                            </option>
+                                            <option value="normal">
+                                                Нормальное
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    <div
+                                        class="mh-genParams"
+                                        data-role="params"
+                                        data-for="genHotTempDist"
+                                        data-mode="uniform"
+                                    >
+                                        <div class="mh-genField">
+                                            <label for="genHotTempMin"
+                                                >Мин. температура (K)</label
+                                            >
+                                            <input
+                                                id="genHotTempMin"
+                                                type="number"
+                                                step="1"
+                                                value="380"
+                                            />
+                                        </div>
+
+                                        <div class="mh-genField">
+                                            <label for="genHotTempMax"
+                                                >Макс. температура (K)</label
+                                            >
+                                            <input
+                                                id="genHotTempMax"
+                                                type="number"
+                                                step="1"
+                                                value="520"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="mh-genParams"
+                                        data-role="params"
+                                        data-for="genHotTempDist"
+                                        data-mode="normal"
+                                        hidden
+                                    >
+                                        <div class="mh-genField">
+                                            <label for="genHotTempMean"
+                                                >Мат. ожидание (K)</label
+                                            >
+                                            <input
+                                                id="genHotTempMean"
+                                                type="number"
+                                                step="1"
+                                                value="450"
+                                            />
+                                        </div>
+
+                                        <div class="mh-genField">
+                                            <label for="genHotTempVar"
+                                                >Дисперсия (K²)</label
+                                            >
+                                            <input
+                                                id="genHotTempVar"
+                                                type="number"
+                                                step="1"
+                                                value="400"
+                                            />
+                                        </div>
+                                    </div>
+                                </fieldset>
+
+                                <fieldset
+                                    class="mh-genGroup"
+                                    aria-label="Распределение нагрузок (горячие)"
+                                >
+                                    <legend>Распределение нагрузок</legend>
+
+                                    <div class="mh-genField">
+                                        <label for="genHotLoadDist"
+                                            >Тип распределения</label
+                                        >
+                                        <select id="genHotLoadDist">
+                                            <option value="uniform" selected>
+                                                Равномерное
+                                            </option>
+                                            <option value="normal">
+                                                Нормальное
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    <div
+                                        class="mh-genParams"
+                                        data-role="params"
+                                        data-for="genHotLoadDist"
+                                        data-mode="uniform"
+                                    >
+                                        <div class="mh-genField">
+                                            <label for="genHotLoadMin"
+                                                >Мин. нагрузка (МВт)</label
+                                            >
+                                            <input
+                                                id="genHotLoadMin"
+                                                type="number"
+                                                step="0.0001"
+                                                value="0.2"
+                                            />
+                                        </div>
+
+                                        <div class="mh-genField">
+                                            <label for="genHotLoadMax"
+                                                >Макс. нагрузка (МВт)</label
+                                            >
+                                            <input
+                                                id="genHotLoadMax"
+                                                type="number"
+                                                step="0.0001"
+                                                value="3"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="mh-genParams"
+                                        data-role="params"
+                                        data-for="genHotLoadDist"
+                                        data-mode="normal"
+                                        hidden
+                                    >
+                                        <div class="mh-genField">
+                                            <label for="genHotLoadMean"
+                                                >Мат. ожидание (МВт)</label
+                                            >
+                                            <input
+                                                id="genHotLoadMean"
+                                                type="number"
+                                                step="0.0001"
+                                                value="1.2"
+                                            />
+                                        </div>
+
+                                        <div class="mh-genField">
+                                            <label for="genHotLoadVar"
+                                                >Дисперсия (МВт²)</label
+                                            >
+                                            <input
+                                                id="genHotLoadVar"
+                                                type="number"
+                                                step="0.0001"
+                                                value="0.25"
+                                            />
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </fieldset>
+
+                            <fieldset
+                                class="mh-genSide"
+                                aria-label="Параметры холодных потоков"
+                            >
+                                <legend>Холодные потоки</legend>
+
+                                <div class="mh-genField">
+                                    <label for="genColdCount"
+                                        >Количество потоков</label
+                                    >
+                                    <input
+                                        id="genColdCount"
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        value="10"
+                                    />
+                                </div>
+
+                                <div class="mh-genField">
+                                    <label for="genColdIsoShare"
+                                        >Доля изотермических</label
+                                    >
+                                    <input
+                                        id="genColdIsoShare"
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        value="50"
+                                    />
+                                    <output
+                                        id="genColdIsoShareOut"
+                                        for="genColdIsoShare"
+                                        >50%</output
+                                    >
+                                </div>
+
+                                <fieldset
+                                    class="mh-genGroup"
+                                    aria-label="Распределение температур (холодные)"
+                                >
+                                    <legend>Распределение температур</legend>
+
+                                    <div class="mh-genField">
+                                        <label for="genColdTempDist"
+                                            >Тип распределения</label
+                                        >
+                                        <select id="genColdTempDist">
+                                            <option value="uniform" selected>
+                                                Равномерное
+                                            </option>
+                                            <option value="normal">
+                                                Нормальное
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    <div
+                                        class="mh-genParams"
+                                        data-role="params"
+                                        data-for="genColdTempDist"
+                                        data-mode="uniform"
+                                    >
+                                        <div class="mh-genField">
+                                            <label for="genColdTempMin"
+                                                >Мин. температура (K)</label
+                                            >
+                                            <input
+                                                id="genColdTempMin"
+                                                type="number"
+                                                step="1"
+                                                value="280"
+                                            />
+                                        </div>
+
+                                        <div class="mh-genField">
+                                            <label for="genColdTempMax"
+                                                >Макс. температура (K)</label
+                                            >
+                                            <input
+                                                id="genColdTempMax"
+                                                type="number"
+                                                step="1"
+                                                value="360"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="mh-genParams"
+                                        data-role="params"
+                                        data-for="genColdTempDist"
+                                        data-mode="normal"
+                                        hidden
+                                    >
+                                        <div class="mh-genField">
+                                            <label for="genColdTempMean"
+                                                >Мат. ожидание (K)</label
+                                            >
+                                            <input
+                                                id="genColdTempMean"
+                                                type="number"
+                                                step="1"
+                                                value="320"
+                                            />
+                                        </div>
+
+                                        <div class="mh-genField">
+                                            <label for="genColdTempVar"
+                                                >Дисперсия (K²)</label
+                                            >
+                                            <input
+                                                id="genColdTempVar"
+                                                type="number"
+                                                step="1"
+                                                value="250"
+                                            />
+                                        </div>
+                                    </div>
+                                </fieldset>
+
+                                <fieldset
+                                    class="mh-genGroup"
+                                    aria-label="Распределение нагрузок (холодные)"
+                                >
+                                    <legend>Распределение нагрузок</legend>
+
+                                    <div class="mh-genField">
+                                        <label for="genColdLoadDist"
+                                            >Тип распределения</label
+                                        >
+                                        <select id="genColdLoadDist">
+                                            <option value="uniform" selected>
+                                                Равномерное
+                                            </option>
+                                            <option value="normal">
+                                                Нормальное
+                                            </option>
+                                        </select>
+                                    </div>
+
+                                    <div
+                                        class="mh-genParams"
+                                        data-role="params"
+                                        data-for="genColdLoadDist"
+                                        data-mode="uniform"
+                                    >
+                                        <div class="mh-genField">
+                                            <label for="genColdLoadMin"
+                                                >Мин. нагрузка (МВт)</label
+                                            >
+                                            <input
+                                                id="genColdLoadMin"
+                                                type="number"
+                                                step="0.0001"
+                                                value="0.2"
+                                            />
+                                        </div>
+
+                                        <div class="mh-genField">
+                                            <label for="genColdLoadMax"
+                                                >Макс. нагрузка (МВт)</label
+                                            >
+                                            <input
+                                                id="genColdLoadMax"
+                                                type="number"
+                                                step="0.0001"
+                                                value="3"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div
+                                        class="mh-genParams"
+                                        data-role="params"
+                                        data-for="genColdLoadDist"
+                                        data-mode="normal"
+                                        hidden
+                                    >
+                                        <div class="mh-genField">
+                                            <label for="genColdLoadMean"
+                                                >Мат. ожидание (МВт)</label
+                                            >
+                                            <input
+                                                id="genColdLoadMean"
+                                                type="number"
+                                                step="0.0001"
+                                                value="1.2"
+                                            />
+                                        </div>
+
+                                        <div class="mh-genField">
+                                            <label for="genColdLoadVar"
+                                                >Дисперсия (МВт²)</label
+                                            >
+                                            <input
+                                                id="genColdLoadVar"
+                                                type="number"
+                                                step="0.0001"
+                                                value="0.25"
+                                            />
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </fieldset>
+                        </div>
+
+                        <div class="mh-genActions">
+                            <button id="btnGenerate" type="button">
+                                🎲 Сгенерировать
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="row"></div>

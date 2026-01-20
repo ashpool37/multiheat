@@ -4,6 +4,7 @@ import { createStatus } from "./status.js";
 import { createViewsCoordinator } from "./views.js";
 import { createTabsController, Tab } from "./tabs.js";
 import { createVisualizationController } from "./visualization.js";
+import { createGeneratorController } from "./generator.js";
 
 import {
   logError,
@@ -339,6 +340,10 @@ export const startApp = async () => {
   visualization.hookEvents();
 
   setupTestMode({ ui, switchTab: tabs.switchTab, visualization });
+
+  // Генератор случайных систем (тестовый режим).
+  const generator = createGeneratorController({ ui, store, refreshAllViews });
+  generator.hookEvents();
 
   // Выбор алгоритма в тестовом режиме.
   // Почему: селектор — источник истины для store, а store — для solveCurrent().

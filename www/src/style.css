@@ -479,10 +479,11 @@ button.secondary:hover {
     user-select: auto;
     pointer-events: auto;
 
-    /* По умолчанию — аккуратная «панель настроек» */
+    /* Панель тестового режима: вертикальная компоновка (селектор → разделитель → генератор) */
     display: flex;
-    align-items: center;
-    justify-content: center;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
     padding: 14px 16px;
 }
 
@@ -530,4 +531,156 @@ button.secondary:hover {
     font-size: 12px;
     font-weight: 700;
     color: #64748b;
+}
+
+/* Тонкая линия-разделитель между «Алгоритм» и генератором */
+#testModeBlock .mh-testDivider {
+    width: 100%;
+    max-width: 720px;
+    height: 1px;
+    border: 0;
+    margin: 12px 0 10px;
+    background: #e2e8f0;
+}
+
+/* --- Генератор случайных систем (панель под тестовым режимом) --- */
+
+#testModeBlock .mh-genPanel {
+    width: 100%;
+    max-width: 920px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+#testModeBlock .mh-genSides {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    align-items: stretch;
+}
+
+#testModeBlock .mh-genSide {
+    flex: 1 1 360px;
+    min-width: 320px;
+    margin: 0;
+    padding: 12px 12px 10px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+#testModeBlock .mh-genSide > legend {
+    padding: 0 6px;
+    font-size: 14px;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+#testModeBlock .mh-genGroup {
+    margin: 10px 0 0;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+}
+
+#testModeBlock .mh-genGroup > legend {
+    padding: 0 6px;
+    font-size: 13px;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+#testModeBlock .mh-genField {
+    /* Упрощённая компоновка: подпись всегда сверху, поле ввода ниже.
+       Для слайдера input[type="range"] и output оказываются в одной строке. */
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 10px;
+    margin: 10px 0;
+}
+
+#testModeBlock .mh-genField label {
+    grid-column: 1 / -1;
+    font-size: 13px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+#testModeBlock .mh-genField input[type="number"],
+#testModeBlock .mh-genField select {
+    grid-column: 1 / -1;
+    width: 100%;
+    height: 36px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 13px;
+    font-weight: 700;
+    outline: none;
+}
+
+#testModeBlock .mh-genField input[type="number"]:focus,
+#testModeBlock .mh-genField select:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
+}
+
+/* Слайдер доли изотермических: слайдер + output в одной строке */
+#testModeBlock .mh-genField input[type="range"] {
+    grid-column: 1 / 2;
+    grid-row: 2;
+    width: 100%;
+    accent-color: #3b82f6;
+}
+
+#testModeBlock .mh-genField output {
+    grid-column: 2 / 3;
+    grid-row: 2;
+    justify-self: end;
+    align-self: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    font-size: 12px;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+/* Параметры распределения: показываем только активный блок (uniform/normal).
+   Видимость управляется через атрибут `hidden` из JS. */
+#testModeBlock .mh-genParams {
+    margin: 0;
+    padding: 0;
+}
+
+#testModeBlock .mh-genParams[hidden] {
+    display: none !important;
+}
+
+/* Кнопка генерации */
+#testModeBlock .mh-genActions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+#testModeBlock .mh-genActions button {
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+#testModeBlock .mh-genActions button:hover {
+    background: #f1f5f9;
+    border-color: #e2e8f0;
 }
