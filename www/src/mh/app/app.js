@@ -581,7 +581,7 @@ export const startApp = async () => {
       store.state = defaultState();
       clearDirtyFlags(store);
 
-      views.refreshAllViews(true);
+      refreshAllViews(true);
       setStatus("ok", "Данные сброшены.");
     } catch (e) {
       logError("Сброс данных не удался", e);
@@ -718,7 +718,7 @@ export const startApp = async () => {
       store.state = { ...normalized, stats };
       clearDirtyFlags(store);
 
-      views.refreshAllViews(true);
+      refreshAllViews(true);
 
       try {
         const verifySystem = buildZigSystem(multiheat, store.state, true);

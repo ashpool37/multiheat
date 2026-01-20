@@ -210,9 +210,28 @@ const redraw = (ui, store, opts = {}) => {
       ex.cold !== undefined,
   ).length;
 
-  const curW = canvas.getBoundingClientRect().width;
+  // Важно: сравниваем требуемую ширину с шириной ПАНЕЛИ визуализации, а не canvas.
+  // Почему: при split-раскладке/переключениях кнопок размеры могут кратковременно «скакать»,
+  // и `canvas.getBoundingClientRect().width` не всегда отражает доступную ширину контейнера,
+  // из-за чего min-width не выставляется и ячейки «уезжают» влево за границу.
+  const panelRectW = vizPanel?.getBoundingClientRect?.().width ?? 0;
 
-  if (cellCount > 0 && Number.isFinite(curW) && curW > 0) {
+  // Сравниваем с «контентной» шириной панели (без padding), иначе min-width может не выставиться
+  // и ячейки уйдут влево за границу canvas/панели.
+  let contentW = panelRectW;
+  if (vizPanel && Number.isFinite(panelRectW) && panelRectW > 0) {
+    const cs = window.getComputedStyle(vizPanel);
+    const padL = Number.parseFloat(cs.paddingLeft || "0") || 0;
+    const padR = Number.parseFloat(cs.paddingRight || "0") || 0;
+    contentW = Math.max(0, panelRectW - padL - padR);
+  }
+
+  const baseW =
+    Number.isFinite(contentW) && contentW > 0
+      ? contentW
+      : canvas.getBoundingClientRect().width;
+
+  if (cellCount > 0 && Number.isFinite(baseW) && baseW > 0) {
     // Эти константы должны соответствовать геометрии рендера.
     const PAD = 12;
     const LEFT_GUTTER = 82;
@@ -232,7 +251,9 @@ const redraw = (ui, store, opts = {}) => {
     const targetMinW = Math.ceil(requiredMinWidth);
     const prevMinW = Number(canvas.dataset.mhVizMinWidthPx || "0");
 
-    if (targetMinW > curW + 1) {
+    // Если контент шире контейнера — расширяем canvas через min-width,
+    // а прокрутку обеспечит сама панель (overflow-x: auto).
+    if (targetMinW > baseW + 1) {
       if (prevMinW !== targetMinW) {
         canvas.style.minWidth = `${targetMinW}px`;
         canvas.dataset.mhVizMinWidthPx = String(targetMinW);
