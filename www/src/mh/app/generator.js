@@ -16,7 +16,7 @@
  * Важно:
  * - Этот модуль НЕ меняет вычислительное ядро.
  * - Он лишь формирует новое каноническое состояние store.state.
- * - UI-элементы должны быть добавлены в #testModeBlock (под селектором «Алгоритм»).
+ * - UI-элементы находятся в панели «Настройки», а кнопка «Сгенерировать» — в верхней панели действий.
  *
  * Ожидаемые элементы UI (id):
  * - Кнопка:            #btnGenerate
@@ -416,8 +416,12 @@ export const createGeneratorController = ({ ui, store, refreshAllViews }) => {
   /** @type {AbortController | null} */
   let ac = null;
 
-  const root = ui?.testModeBlock ?? document;
-  const btnGenerate = root?.querySelector?.("#btnGenerate") ?? null;
+  // Корень параметров генератора: теперь в панели «Настройки», но элементы имеют глобальные id.
+  const root =
+    ui?.settingsPanel ?? ui?.settings?.panel ?? ui?.testModeBlock ?? document;
+
+  // Кнопка «Сгенерировать» вынесена в верхнюю панель действий.
+  const btnGenerate = document.querySelector("#btnGenerate");
 
   const generateNow = () => {
     // Подтверждение перезаписи, если текущая система непустая.

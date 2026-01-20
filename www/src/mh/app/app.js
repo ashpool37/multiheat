@@ -47,19 +47,6 @@ import { renderTables } from "../render/tables.js";
  * Основной модуль приложения: связывает UI, состояние, представления и Zig/WASM.
  */
 
-const setupToggle = (selector) => {
-  const btn = document.querySelector(selector);
-  if (!btn) return;
-
-  btn.classList.add("mh-toggle");
-  btn.setAttribute("aria-pressed", "false");
-
-  btn.addEventListener("click", () => {
-    const active = btn.getAttribute("aria-pressed") !== "true";
-    btn.setAttribute("aria-pressed", active ? "true" : "false");
-  });
-};
-
 const setUiEnabled = (ui, enabled) => {
   const allButtons = [...Object.values(ui.buttons), ...Object.values(ui.tabs)];
   for (const b of allButtons) b.disabled = !enabled;
@@ -211,37 +198,8 @@ const setupDropdownMenus = (ui) => {
   }
 };
 
-const setupTestMode = ({ ui, switchTab, visualization }) => {
-  const btnTest = ui?.toggles?.test ?? document.querySelector("#btnTest");
-  const block = ui.testModeBlock;
-
-  if (!btnTest || !block) return;
-
-  const apply = () => {
-    const active = btnTest.getAttribute("aria-pressed") === "true";
-    block.hidden = !active;
-
-    if (!active) return;
-
-    // Почему: тестовый режим должен быть «дешёвым» — визуализацию выключаем и уходим в «Скрыть».
-    if (visualization && typeof visualization.setEnabled === "function") {
-      visualization.setEnabled(false);
-    } else {
-      const btnVisualize = document.querySelector("#btnVisualize");
-      if (btnVisualize) btnVisualize.setAttribute("aria-pressed", "false");
-    }
-
-    switchTab(Tab.hide);
-  };
-
-  btnTest.addEventListener("click", () => {
-    // Почему: `setupToggle()` меняет `aria-pressed` в обработчике клика.
-    // Нам нужно прочитать уже обновлённое значение.
-    queueMicrotask(apply);
-  });
-
-  apply();
-};
+// Режим «Тестировать» удалён: скрытие левой панели делается повторным нажатием на активную вкладку,
+// а параметры (алгоритм/генератор) живут в панели «настройки».
 
 const hasAnyUserData = ({ store, ui }) => {
   const s = store.state;
@@ -328,9 +286,18 @@ export const startApp = async () => {
   setUiEnabled(ui, true);
   setSolverEnabled(ui, false);
 
-  setupToggle("#btnVisualize");
-  setupToggle("#btnEqCurves");
-  setupToggle("#btnTest");
+  // Правая «система вкладок» (настройки/визуализация/кривые):
+  // состоянием (aria-pressed) управляет контроллер правой панели; здесь лишь гарантируем базовые атрибуты.
+  const ensurePressedToggleAttrs = (btn) => {
+    if (!btn) return;
+    btn.classList.add("mh-toggle");
+    if (!btn.hasAttribute("aria-pressed"))
+      btn.setAttribute("aria-pressed", "false");
+  };
+
+  ensurePressedToggleAttrs(ui?.toggles?.settings);
+  ensurePressedToggleAttrs(ui?.toggles?.visualize);
+  ensurePressedToggleAttrs(ui?.toggles?.eqCurves);
 
   visualization = createVisualizationController({
     ui,
@@ -339,19 +306,17 @@ export const startApp = async () => {
   });
   visualization.hookEvents();
 
-  setupTestMode({ ui, switchTab: tabs.switchTab, visualization });
-
-  // Генератор случайных систем (тестовый режим).
+  // Генератор случайных систем (панель «настройки»; кнопка «Сгенерировать» — в верхней панели).
   const generator = createGeneratorController({ ui, store, refreshAllViews });
   generator.hookEvents();
 
-  // Выбор алгоритма в тестовом режиме.
+  // Выбор алгоритма (панель «настройки»).
   // Почему: селектор — источник истины для store, а store — для solveCurrent().
-  if (ui?.testMode?.algorithmSelect) {
+  if (ui?.settings?.algorithmSelect) {
     // Дефолт: жадный.
     if (!store.solverAlgorithm) store.solverAlgorithm = "greedy";
 
-    const sel = ui.testMode.algorithmSelect;
+    const sel = ui.settings.algorithmSelect;
 
     // Инициализируем значение селектора из store.
     sel.value =

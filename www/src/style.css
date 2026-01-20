@@ -214,8 +214,9 @@ button.secondary:hover {
     width: 100%;
 }
 
-/* Панель визуализации: по виду как tabPanels, чтобы интерфейс был консистентным. */
-.mh-vizPanel {
+/* Правая панель: визуализация и настройки (единый внешний вид). */
+.mh-vizPanel,
+.mh-settingsPanel {
     box-sizing: border-box;
     border-radius: 12px;
     border: 1px solid #cbd5e1;
@@ -462,52 +463,31 @@ button.secondary:hover {
     border-color: #e2e8f0;
 }
 
-/* Блок режима тестирования: панель с интерактивными настройками */
-#testModeBlock[hidden] {
+/* Режим «Тестировать» удалён: старый блок скрываем на случай устаревшей разметки. */
+#testModeBlock {
     display: none !important;
 }
 
-#testModeBlock {
-    width: 100%;
-    min-height: 156px; /* примерно высота 3 кнопок */
-    border-radius: 12px;
-    border: 1px solid #cbd5e1;
-    background: #ffffff;
-    color: #0f172a;
+/* --- Панель «настройки»: компактный интерфейс генератора --- */
 
-    /* Важно: блок интерактивный (выпадающий список и т.п.) */
-    user-select: auto;
-    pointer-events: auto;
-
-    /* Панель тестового режима: вертикальная компоновка (селектор → разделитель → генератор) */
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-    padding: 14px 16px;
-}
-
-/* Контейнер управляющих элементов внутри #testModeBlock */
-#testModeBlock .mh-testControls {
-    width: 100%;
-    max-width: 720px;
+/* Верхняя строка контролов (выбор алгоритма) */
+.mh-settingsPanel .mh-settingsControls {
     display: flex;
     align-items: center;
     gap: 10px 12px;
     flex-wrap: wrap;
 }
 
-/* Подписи полей */
-#testModeBlock .mh-testLabel {
+/* Подпись и селектор алгоритма */
+.mh-settingsPanel .mh-testLabel {
     font-size: 14px;
     font-weight: 800;
     color: #0f172a;
 }
 
-/* Выпадающий список выбора алгоритма */
-#testModeBlock .mh-testSelect {
-    min-width: 240px;
-    height: 38px;
+.mh-settingsPanel .mh-testSelect {
+    min-width: 220px;
+    height: 34px;
     padding: 6px 10px;
 
     border-radius: 10px;
@@ -515,133 +495,62 @@ button.secondary:hover {
     background: #ffffff;
     color: #0f172a;
 
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
 
     outline: none;
 }
 
-#testModeBlock .mh-testSelect:focus {
+.mh-settingsPanel .mh-testSelect:focus {
     border-color: #60a5fa;
     box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
 }
 
-/* Небольшая подпись/пояснение рядом с контролами (если понадобится) */
-#testModeBlock .mh-testHint {
-    font-size: 12px;
-    font-weight: 700;
-    color: #64748b;
+.mh-settingsPanel .mh-settingsTitle {
+    margin: 0 0 10px;
+    padding: 0;
+    font-size: 14px;
+    font-weight: 900;
+    color: #0f172a;
 }
 
-/* Тонкая линия-разделитель между «Алгоритм» и генератором */
-#testModeBlock .mh-testDivider {
-    width: 100%;
-    max-width: 720px;
-    height: 1px;
-    border: 0;
-    margin: 12px 0 10px;
-    background: #e2e8f0;
-}
-
-/* --- Генератор случайных систем (панель под тестовым режимом) --- */
-
-#testModeBlock .mh-genPanel {
-    width: 100%;
-    max-width: 920px;
+/* Генератор: стороны друг под другом */
+.mh-settingsPanel .mh-genSides {
     display: flex;
     flex-direction: column;
-    gap: 14px;
-}
-
-#testModeBlock .mh-genSides {
-    display: flex;
-    gap: 14px;
-    flex-wrap: wrap;
+    gap: 12px;
     align-items: stretch;
 }
 
-#testModeBlock .mh-genSide {
-    flex: 1 1 360px;
-    min-width: 320px;
-    margin: 0;
-    padding: 12px 12px 10px;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    background: #f8fafc;
+/* Верхняя строка в панели стороны: count + iso-share */
+.mh-settingsPanel .mh-genTopRow {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 10px 12px;
+    align-items: end;
 }
 
-#testModeBlock .mh-genSide > legend {
-    padding: 0 6px;
-    font-size: 14px;
-    font-weight: 900;
-    color: #0f172a;
+/* Узкое поле количества потоков (примерно 1/3 ширины) */
+.mh-settingsPanel .mh-genTopRow .mh-genFieldNarrow input[type="number"] {
+    width: 100%;
+    max-width: 160px;
 }
 
-#testModeBlock .mh-genGroup {
-    margin: 10px 0 0;
-    padding: 10px;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    background: #ffffff;
-}
-
-#testModeBlock .mh-genGroup > legend {
-    padding: 0 6px;
-    font-size: 13px;
-    font-weight: 900;
-    color: #0f172a;
-}
-
-#testModeBlock .mh-genField {
-    /* Упрощённая компоновка: подпись всегда сверху, поле ввода ниже.
-       Для слайдера input[type="range"] и output оказываются в одной строке. */
+/* Слайдер изотермичности занимает оставшуюся ширину */
+.mh-settingsPanel .mh-genRangeRow {
     display: grid;
     grid-template-columns: 1fr auto;
-    gap: 6px 10px;
-    margin: 10px 0;
+    gap: 8px;
+    align-items: center;
 }
 
-#testModeBlock .mh-genField label {
-    grid-column: 1 / -1;
-    font-size: 13px;
-    font-weight: 800;
-    color: #0f172a;
-}
-
-#testModeBlock .mh-genField input[type="number"],
-#testModeBlock .mh-genField select {
-    grid-column: 1 / -1;
-    width: 100%;
-    height: 36px;
-    padding: 6px 10px;
-    border-radius: 10px;
-    border: 1px solid #cbd5e1;
-    background: #ffffff;
-    color: #0f172a;
-    font-size: 13px;
-    font-weight: 700;
-    outline: none;
-}
-
-#testModeBlock .mh-genField input[type="number"]:focus,
-#testModeBlock .mh-genField select:focus {
-    border-color: #60a5fa;
-    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
-}
-
-/* Слайдер доли изотермических: слайдер + output в одной строке */
-#testModeBlock .mh-genField input[type="range"] {
-    grid-column: 1 / 2;
-    grid-row: 2;
+.mh-settingsPanel .mh-genRangeRow input[type="range"] {
     width: 100%;
     accent-color: #3b82f6;
 }
 
-#testModeBlock .mh-genField output {
-    grid-column: 2 / 3;
-    grid-row: 2;
+.mh-settingsPanel .mh-genRangeRow output {
     justify-self: end;
-    align-self: center;
     padding: 4px 8px;
     border-radius: 999px;
     border: 1px solid #e2e8f0;
@@ -651,36 +560,106 @@ button.secondary:hover {
     color: #0f172a;
 }
 
+/* Пары параметров на одной линии: min/max и mean/variance */
+.mh-settingsPanel .mh-genPairRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+    align-items: end;
+}
+
+/* Тонкая линия-разделитель внутри панели «настройки» */
+.mh-settingsPanel .mh-testDivider {
+    width: 100%;
+    height: 1px;
+    border: 0;
+    margin: 12px 0 10px;
+    background: #e2e8f0;
+}
+
+/* --- Генератор случайных систем (панель «настройки») --- */
+
+.mh-settingsPanel .mh-genPanel {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.mh-settingsPanel .mh-genSide {
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.mh-settingsPanel .mh-genSide > legend {
+    padding: 0 6px;
+    font-size: 14px;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+/* Компактные группы распределений */
+.mh-settingsPanel .mh-genGroup {
+    margin: 10px 0 0;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+}
+
+.mh-settingsPanel .mh-genGroup > legend {
+    padding: 0 6px;
+    font-size: 13px;
+    font-weight: 900;
+    color: #0f172a;
+}
+
+/* Поля: подпись сверху, контрол снизу */
+.mh-settingsPanel .mh-genField {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 8px 0;
+}
+
+.mh-settingsPanel .mh-genField label {
+    font-size: 13px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.mh-settingsPanel .mh-genField input[type="number"],
+.mh-settingsPanel .mh-genField select {
+    width: 100%;
+    height: 34px;
+    padding: 6px 10px;
+
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #0f172a;
+
+    font-size: 13px;
+    font-weight: 700;
+    outline: none;
+}
+
+.mh-settingsPanel .mh-genField input[type="number"]:focus,
+.mh-settingsPanel .mh-genField select:focus {
+    border-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
+}
+
 /* Параметры распределения: показываем только активный блок (uniform/normal).
    Видимость управляется через атрибут `hidden` из JS. */
-#testModeBlock .mh-genParams {
+.mh-settingsPanel .mh-genParams {
     margin: 0;
     padding: 0;
 }
 
-#testModeBlock .mh-genParams[hidden] {
+.mh-settingsPanel .mh-genParams[hidden] {
     display: none !important;
-}
-
-/* Кнопка генерации */
-#testModeBlock .mh-genActions {
-    display: flex;
-    justify-content: flex-end;
-}
-
-#testModeBlock .mh-genActions button {
-    height: 38px;
-    padding: 0 14px;
-    border-radius: 12px;
-    border: 1px solid #cbd5e1;
-    background: #ffffff;
-    color: #0f172a;
-    font-size: 14px;
-    font-weight: 900;
-    cursor: pointer;
-}
-
-#testModeBlock .mh-genActions button:hover {
-    background: #f1f5f9;
-    border-color: #e2e8f0;
 }

@@ -12,8 +12,9 @@ import { defaultState } from "../model/state.js";
  * @param {string} [opts.activeTab] Активная вкладка (по умолчанию `"toml"`)
  * @param {boolean} [opts.visualizationEnabled] Включена ли визуализация (по умолчанию `false`)
  * @param {boolean} [opts.eqCurvesEnabled] Включены ли эквивалентные кривые (по умолчанию `false`)
+ * @param {boolean} [opts.settingsEnabled] Включена ли панель «Настройки» (по умолчанию `false`)
  * @param {"greedy"|"curves"|"trivial"} [opts.solverAlgorithm] Выбранный алгоритм синтеза (по умолчанию `"greedy"`)
- * @returns {{ state: any, activeTab: string, viewsSuspended: boolean, visualizationEnabled: boolean, eqCurvesEnabled: boolean, solverAlgorithm: "greedy"|"curves"|"trivial", dirty: { toml: boolean, csvStreams: boolean, csvSolution: boolean } }}
+ * @returns {{ state: any, activeTab: string, viewsSuspended: boolean, visualizationEnabled: boolean, eqCurvesEnabled: boolean, settingsEnabled: boolean, solverAlgorithm: "greedy"|"curves"|"trivial", dirty: { toml: boolean, csvStreams: boolean, csvSolution: boolean } }}
  */
 export const createStore = (opts = {}) => {
   const initialState = opts.state ?? defaultState();
@@ -31,6 +32,7 @@ export const createStore = (opts = {}) => {
     viewsSuspended: false,
     visualizationEnabled: opts.visualizationEnabled ?? false,
     eqCurvesEnabled: opts.eqCurvesEnabled ?? false,
+    settingsEnabled: opts.settingsEnabled ?? false,
     solverAlgorithm,
     dirty: {
       toml: false,

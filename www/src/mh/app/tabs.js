@@ -2,9 +2,10 @@
  * Контроллер вкладок.
  *
  * Правила:
- * - вкладка «Скрыть» включает `store.viewsSuspended` и скрывает `ui.tabPanels`
+ * - «Скрытие» реализовано через `store.viewsSuspended` и `ui.tabPanels.hidden`
+ * - клик по уже активной вкладке переключает скрытие/показ левой панели
  * - при переходе на «Описание»/«Таблица» сначала синхронизируем активный редактор
- * - при выходе из «Скрыть» возобновляем обновления и принудительно обновляем представления
+ * - при выходе из режима скрытия возобновляем обновления и принудительно обновляем представления
  */
 
 /** @readonly */
@@ -13,7 +14,6 @@ export const Tab = {
   tables: "tables",
   toml: "toml",
   csv: "csv",
-  hide: "hide",
 };
 
 /**
@@ -70,12 +70,7 @@ export const createTabsController = ({
 
   const switchTab = (nextTab) => {
     try {
-      if (nextTab === Tab.hide) {
-        setViewsSuspended(true, false);
-        setActiveTab(nextTab);
-        return;
-      }
-
+      // Если панель была скрыта, при переходе на другую вкладку сначала раскрываем и обновляем.
       if (store.viewsSuspended) {
         setViewsSuspended(false, false);
         refreshAllViews(true);
@@ -108,13 +103,35 @@ export const createTabsController = ({
   };
 
   const hookTabEvents = () => {
+    /**
+     * Клик по вкладке:
+     * - если это уже активная вкладка — переключаем скрытие/показ левой панели
+     * - иначе — обычное переключение вкладки (с авто-раскрытием, если панель была скрыта)
+     *
+     * @param {string} tab
+     */
+    const onTabClick = (tab) => {
+      if (store.activeTab === tab) {
+        const nextSuspended = !store.viewsSuspended;
+        setViewsSuspended(nextSuspended, true);
+
+        // Если раскрыли панель — обновляем представления, чтобы отразить изменения, сделанные в скрытом режиме.
+        if (!nextSuspended) {
+          refreshAllViews(true);
+        }
+
+        return;
+      }
+
+      switchTab(tab);
+    };
+
     ui.tabs.description.addEventListener("click", () =>
-      switchTab(Tab.description),
+      onTabClick(Tab.description),
     );
-    ui.tabs.tables.addEventListener("click", () => switchTab(Tab.tables));
-    ui.tabs.toml.addEventListener("click", () => switchTab(Tab.toml));
-    ui.tabs.csv.addEventListener("click", () => switchTab(Tab.csv));
-    ui.tabs.hide.addEventListener("click", () => switchTab(Tab.hide));
+    ui.tabs.tables.addEventListener("click", () => onTabClick(Tab.tables));
+    ui.tabs.toml.addEventListener("click", () => onTabClick(Tab.toml));
+    ui.tabs.csv.addEventListener("click", () => onTabClick(Tab.csv));
   };
 
   return {

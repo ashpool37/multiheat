@@ -4,11 +4,58 @@ import { $ } from "../util/dom.js";
  * Собирает ссылки на элементы интерфейса.
  * Если обязательный элемент не найден — выбрасывает исключение.
  *
+ * Примечание по новой структуре:
+ * - Левая панель: вкладки (Описание/Таблица/TOML/CSV), скрывается повторным нажатием на активную вкладку.
+ * - Правая панель: «настройки» и «визуализация» (включая режим «кривые») — взаимоисключающие.
+ * - Генератор и селектор алгоритма перенесены в панель «настройки».
+ * - Кнопка «Сгенерировать» вынесена в верхнюю панель действий (рядом с «Открыть»).
+ *
  * @param {ParentNode} [root=document]
  */
 export const buildUiRefs = (root = document) => {
   const q = (sel) => $(sel, root);
   const qOpt = (sel) => root.querySelector(sel);
+
+  // Панель «настройки» теперь обязательна: без неё нет доступа к генератору и выбору алгоритма.
+  const settingsPanel = q("#settingsPanel");
+  const algorithmSelect = q("#selAlgorithm");
+
+  const generator = {
+    hot: {
+      count: q("#genHotCount"),
+      isoShare: q("#genHotIsoShare"),
+      isoShareOut: q("#genHotIsoShareOut"),
+
+      tempDist: q("#genHotTempDist"),
+      tempMin: q("#genHotTempMin"),
+      tempMax: q("#genHotTempMax"),
+      tempMean: q("#genHotTempMean"),
+      tempVar: q("#genHotTempVar"),
+
+      loadDist: q("#genHotLoadDist"),
+      loadMin: q("#genHotLoadMin"),
+      loadMax: q("#genHotLoadMax"),
+      loadMean: q("#genHotLoadMean"),
+      loadVar: q("#genHotLoadVar"),
+    },
+    cold: {
+      count: q("#genColdCount"),
+      isoShare: q("#genColdIsoShare"),
+      isoShareOut: q("#genColdIsoShareOut"),
+
+      tempDist: q("#genColdTempDist"),
+      tempMin: q("#genColdTempMin"),
+      tempMax: q("#genColdTempMax"),
+      tempMean: q("#genColdTempMean"),
+      tempVar: q("#genColdTempVar"),
+
+      loadDist: q("#genColdLoadDist"),
+      loadMin: q("#genColdLoadMin"),
+      loadMax: q("#genColdLoadMax"),
+      loadMean: q("#genColdLoadMean"),
+      loadVar: q("#genColdLoadVar"),
+    },
+  };
 
   return {
     status: q("#statusLabel"),
@@ -25,15 +72,17 @@ export const buildUiRefs = (root = document) => {
       saveCsvStreams: q("#menuSaveCsvStreams"),
       saveCsvSolution: q("#menuSaveCsvSolution"),
 
+      generate: q("#btnGenerate"),
+
       solve: q("#btnSolve"),
       verify: q("#btnVerify"),
       clear: q("#btnClear"),
     },
 
     toggles: {
+      settings: q("#btnSettings"),
       visualize: q("#btnVisualize"),
       eqCurves: q("#btnEqCurves"),
-      test: q("#btnTest"),
     },
 
     menus: {
@@ -52,7 +101,6 @@ export const buildUiRefs = (root = document) => {
       tables: q("#tabTables"),
       toml: q("#tabToml"),
       csv: q("#tabCsv"),
-      hide: q("#tabHide"),
     },
 
     panels: {
@@ -60,48 +108,23 @@ export const buildUiRefs = (root = document) => {
       tables: q("#panelTables"),
       toml: q("#panelToml"),
       csv: q("#panelCsv"),
-      hide: q("#panelHide"),
     },
 
     viewsLayout: q("#viewsLayout"),
     tabPanels: q("#tabPanels"),
-    testModeBlock: q("#testModeBlock"),
 
+    // Правая панель «настройки»
+    settings: {
+      panel: settingsPanel,
+      algorithmSelect,
+      generator,
+    },
+
+    // Совместимость: старый код мог ожидать ui.testMode.algorithmSelect / ui.testMode.generator.*
+    // Пока оставляем алиасы, чтобы переход на новую структуру был менее ломким.
     testMode: {
-      algorithmSelect: qOpt("#selAlgorithm"),
-
-      // Генератор случайных систем (элементы могут отсутствовать, если панель ещё не дорисована).
-      generator: {
-        hot: {
-          count: qOpt("#genHotCount"),
-          isoPct: qOpt("#genHotIsoShare"),
-          tempDist: qOpt("#genHotTempDist"),
-          tempMin: qOpt("#genHotTempMin"),
-          tempMax: qOpt("#genHotTempMax"),
-          tempMean: qOpt("#genHotTempMean"),
-          tempVar: qOpt("#genHotTempVar"),
-          loadDist: qOpt("#genHotLoadDist"),
-          loadMin: qOpt("#genHotLoadMin"),
-          loadMax: qOpt("#genHotLoadMax"),
-          loadMean: qOpt("#genHotLoadMean"),
-          loadVar: qOpt("#genHotLoadVar"),
-        },
-        cold: {
-          count: qOpt("#genColdCount"),
-          isoPct: qOpt("#genColdIsoShare"),
-          tempDist: qOpt("#genColdTempDist"),
-          tempMin: qOpt("#genColdTempMin"),
-          tempMax: qOpt("#genColdTempMax"),
-          tempMean: qOpt("#genColdTempMean"),
-          tempVar: qOpt("#genColdTempVar"),
-          loadDist: qOpt("#genColdLoadDist"),
-          loadMin: qOpt("#genColdLoadMin"),
-          loadMax: qOpt("#genColdLoadMax"),
-          loadMean: qOpt("#genColdLoadMean"),
-          loadVar: qOpt("#genColdLoadVar"),
-        },
-        generateButton: qOpt("#btnGenerate"),
-      },
+      algorithmSelect,
+      generator,
     },
 
     description: {

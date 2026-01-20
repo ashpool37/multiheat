@@ -35,12 +35,34 @@ import {
 const applyLayout = (ui, store) => {
   const viewsLayout = ui.viewsLayout;
   const tabPanels = ui.tabPanels;
-  const vizPanel = ui.visualization.panel;
+  const vizPanel = ui?.visualization?.panel;
 
-  if (!viewsLayout || !tabPanels || !vizPanel) return;
+  // Панель «Настройки» может жить рядом с визуализацией и вести себя так же.
+  // Важно: панель необязательная, чтобы приложение не ломалось до обновления разметки.
+  const settingsPanel =
+    ui?.settings?.panel ?? document.querySelector("#settingsPanel");
+
+  if (!viewsLayout || !tabPanels) return;
 
   const hideActive = !!store.viewsSuspended;
   const vizActive = !!store.visualizationEnabled;
+  const settingsActive = !!store.settingsEnabled;
+
+  const rightActive = vizActive || settingsActive;
+
+  const hideAllRightPanels = () => {
+    if (vizPanel) vizPanel.hidden = true;
+    if (settingsPanel) settingsPanel.hidden = true;
+  };
+
+  const showRightPanel = () => {
+    hideAllRightPanels();
+    if (settingsActive) {
+      if (settingsPanel) settingsPanel.hidden = false;
+    } else if (vizActive) {
+      if (vizPanel) vizPanel.hidden = false;
+    }
+  };
 
   // Сброс «сплита» до базового состояния.
   const setSplit = (split) => {
@@ -52,8 +74,14 @@ const applyLayout = (ui, store) => {
       tabPanels.style.flex = "1 1 0";
       tabPanels.style.minWidth = "0";
 
-      vizPanel.style.flex = "1 1 0";
-      vizPanel.style.minWidth = "0";
+      if (vizPanel) {
+        vizPanel.style.flex = "1 1 0";
+        vizPanel.style.minWidth = "0";
+      }
+      if (settingsPanel) {
+        settingsPanel.style.flex = "1 1 0";
+        settingsPanel.style.minWidth = "0";
+      }
     } else {
       viewsLayout.style.display = "";
       viewsLayout.style.alignItems = "";
@@ -62,15 +90,21 @@ const applyLayout = (ui, store) => {
       tabPanels.style.flex = "";
       tabPanels.style.minWidth = "";
 
-      vizPanel.style.flex = "";
-      vizPanel.style.minWidth = "";
+      if (vizPanel) {
+        vizPanel.style.flex = "";
+        vizPanel.style.minWidth = "";
+      }
+      if (settingsPanel) {
+        settingsPanel.style.flex = "";
+        settingsPanel.style.minWidth = "";
+      }
     }
   };
 
-  // Скрыть active, Визуализировать inactive: ничего не показываем под панелью управления.
-  if (hideActive && !vizActive) {
+  // «Скрыть» active и справа ничего не открыто: ничего не показываем под панелью управления.
+  if (hideActive && !rightActive) {
     viewsLayout.hidden = true;
-    vizPanel.hidden = true;
+    hideAllRightPanels();
     // `tabPanels.hidden` управляется вкладками, но на всякий случай не раскрываем.
     return;
   }
@@ -78,24 +112,24 @@ const applyLayout = (ui, store) => {
   // В остальных режимах сам layout видим.
   viewsLayout.hidden = false;
 
-  // Скрыть inactive, Визуализировать inactive: только активное представление вкладок.
-  if (!hideActive && !vizActive) {
-    vizPanel.hidden = true;
+  // Обычный режим: только активное представление вкладок.
+  if (!hideActive && !rightActive) {
+    hideAllRightPanels();
     tabPanels.hidden = false;
     setSplit(false);
     return;
   }
 
-  // Скрыть active, Визуализировать active: только визуализация.
-  if (hideActive && vizActive) {
-    vizPanel.hidden = false;
-    tabPanels.hidden = true; // вкладки «заморожены», но визуализацию показываем
+  // «Скрыть» active и справа что-то открыто: показываем только правую панель.
+  if (hideActive && rightActive) {
+    showRightPanel();
+    tabPanels.hidden = true; // вкладки «заморожены», но правую панель показываем
     setSplit(false);
     return;
   }
 
-  // Скрыть inactive, Визуализировать active: сплит 50/50 (слева активная вкладка, справа визуализация).
-  vizPanel.hidden = false;
+  // Вкладки слева + активная правая панель: сплит 50/50.
+  showRightPanel();
   tabPanels.hidden = false;
   setSplit(true);
 };
@@ -334,16 +368,54 @@ export const createVisualizationController = ({ ui, store, multiheat }) => {
     });
   };
 
-  const syncStoreFromToggle = () => {
-    const btn = ui?.toggles?.visualize;
-    if (!btn) return;
-    store.visualizationEnabled = btn.getAttribute("aria-pressed") === "true";
+  /**
+   * Получить активную «правую вкладку» из store.
+   *
+   * Важно: «кривые» — это отдельная правая вкладка, но отображается внутри панели визуализации.
+   *
+   * @returns {"none"|"settings"|"viz"|"curves"}
+   */
+  const getRightKindFromStore = () => {
+    if (store.settingsEnabled) return "settings";
+    if (store.eqCurvesEnabled) return "curves";
+    if (store.visualizationEnabled) return "viz";
+    return "none";
   };
 
-  const syncEqCurvesFromToggle = () => {
-    const btn = ui?.toggles?.eqCurves;
+  /** @param {HTMLElement|null} btn @param {boolean} pressed */
+  const setPressed = (btn, pressed) => {
     if (!btn) return;
-    store.eqCurvesEnabled = btn.getAttribute("aria-pressed") === "true";
+    btn.setAttribute("aria-pressed", pressed ? "true" : "false");
+  };
+
+  /**
+   * Установить активную правую вкладку (строго взаимоисключающую).
+   *
+   * Почему: мы НЕ полагаемся на внешний «авто-тоггл» aria-pressed — управляем состоянием здесь,
+   * чтобы правая система вкладок была консистентной.
+   *
+   * @param {"none"|"settings"|"viz"|"curves"} kind
+   */
+  const setRightKind = (kind) => {
+    const vizBtn = ui?.toggles?.visualize ?? null;
+    const eqBtn = ui?.toggles?.eqCurves ?? null;
+    const settingsBtn = ui?.toggles?.settings ?? null;
+
+    const enableSettings = kind === "settings";
+    const enableCurves = kind === "curves";
+    const enableViz = kind === "viz" || enableCurves;
+
+    // Важно: «кривые» — это отдельная правая вкладка, но отображается внутри панели визуализации.
+    store.settingsEnabled = enableSettings;
+    store.visualizationEnabled = enableViz;
+    store.eqCurvesEnabled = enableCurves;
+
+    setPressed(settingsBtn, enableSettings);
+
+    // «Кривые» показываются в панели визуализации, но кнопка «Визуализировать» при этом не нажата.
+    // Поэтому `store.visualizationEnabled` может быть true, а `btnVisualize[aria-pressed]` — false.
+    setPressed(vizBtn, kind === "viz");
+    setPressed(eqBtn, enableCurves);
   };
 
   const apply = () => {
@@ -352,37 +424,28 @@ export const createVisualizationController = ({ ui, store, multiheat }) => {
   };
 
   const hookEvents = () => {
-    // Переключатель «Визуализировать».
-    // Важно: `setupToggle("#btnVisualize")` уже меняет aria-pressed.
-    // Здесь мы лишь синхронизируем store и применяем режим.
+    // Правая «система вкладок»: взаимоисключающее поведение + повторное нажатие закрывает панель.
+
     if (ui?.toggles?.visualize) {
       ui.toggles.visualize.addEventListener("click", () => {
-        syncStoreFromToggle();
-
-        // Если визуализация выключена (в том числе вручную пользователем) —
-        // режим эквивалентных кривых автоматически сбрасываем.
-        if (!store.visualizationEnabled) {
-          store.eqCurvesEnabled = false;
-          const eqBtn = ui?.toggles?.eqCurves;
-          if (eqBtn) eqBtn.setAttribute("aria-pressed", "false");
-        }
-
+        const active = store.visualizationEnabled && !store.eqCurvesEnabled;
+        setRightKind(active ? "none" : "viz");
         apply();
       });
     }
 
-    // Переключатель «Эквивалентные кривые».
-    // Важно: это только режим отрисовки. При включении автоматически включаем панель визуализации.
     if (ui?.toggles?.eqCurves) {
       ui.toggles.eqCurves.addEventListener("click", () => {
-        syncEqCurvesFromToggle();
+        const active = store.visualizationEnabled && store.eqCurvesEnabled;
+        setRightKind(active ? "none" : "curves");
+        apply();
+      });
+    }
 
-        if (store.eqCurvesEnabled) {
-          store.visualizationEnabled = true;
-          const vizBtn = ui?.toggles?.visualize;
-          if (vizBtn) vizBtn.setAttribute("aria-pressed", "true");
-        }
-
+    if (ui?.toggles?.settings) {
+      ui.toggles.settings.addEventListener("click", () => {
+        const active = store.settingsEnabled;
+        setRightKind(active ? "none" : "settings");
         apply();
       });
     }
@@ -414,17 +477,19 @@ export const createVisualizationController = ({ ui, store, multiheat }) => {
     }
   };
 
-  // Инициализация состояния из текущего UI.
-  syncStoreFromToggle();
-  syncEqCurvesFromToggle();
+  // Инициализация состояния из текущего UI:
+  // читаем начальные aria-pressed (если они выставлены разметкой), затем нормализуем правую панель.
+  const readPressed = (btn) => btn?.getAttribute("aria-pressed") === "true";
 
-  // Если эквивалентные кривые включены, а визуализация выключена — включаем визуализацию,
-  // иначе панель может остаться скрытой.
-  if (store.eqCurvesEnabled && !store.visualizationEnabled) {
-    store.visualizationEnabled = true;
-    const vizBtn = ui?.toggles?.visualize;
-    if (vizBtn) vizBtn.setAttribute("aria-pressed", "true");
-  }
+  store.settingsEnabled = readPressed(ui?.toggles?.settings);
+  store.visualizationEnabled = readPressed(ui?.toggles?.visualize);
+  store.eqCurvesEnabled = readPressed(ui?.toggles?.eqCurves);
+
+  // Приоритет: настройки > кривые > визуализация > ничего
+  if (store.settingsEnabled) setRightKind("settings");
+  else if (store.eqCurvesEnabled) setRightKind("curves");
+  else if (store.visualizationEnabled) setRightKind("viz");
+  else setRightKind("none");
 
   /**
    * Программно включить/выключить визуализацию.
@@ -434,20 +499,7 @@ export const createVisualizationController = ({ ui, store, multiheat }) => {
    * @param {boolean} enabled
    */
   const setEnabled = (enabled) => {
-    const pressed = !!enabled;
-    store.visualizationEnabled = pressed;
-
-    const btn = ui?.toggles?.visualize;
-    if (btn) btn.setAttribute("aria-pressed", pressed ? "true" : "false");
-
-    // Почему: при программном отключении визуализации (например, тестовым режимом)
-    // режим эквивалентных кривых должен быть сброшен, чтобы не оставаться "включённым в фоне".
-    if (!pressed) {
-      store.eqCurvesEnabled = false;
-      const eqBtn = ui?.toggles?.eqCurves;
-      if (eqBtn) eqBtn.setAttribute("aria-pressed", "false");
-    }
-
+    setRightKind(enabled ? "viz" : "none");
     apply();
   };
 
