@@ -18,6 +18,7 @@ import {
 import * as multiheatModule from "../../../zig/multiheat_entry.zig";
 
 import { defaultState, validateAndNormalizeState } from "../model/state.js";
+import { computeSolutionStats } from "../model/stats.js";
 
 import { parseTomlToState, emitToml } from "../io/toml.js";
 import {
@@ -340,18 +341,26 @@ export const startApp = async () => {
   setupTestMode({ ui, switchTab: tabs.switchTab, visualization });
 
   // Выбор алгоритма в тестовом режиме.
-  // Почему: селектор должен быть источником истины для store, а store — для solveCurrent().
+  // Почему: селектор — источник истины для store, а store — для solveCurrent().
   if (ui?.testMode?.algorithmSelect) {
     // Дефолт: жадный.
     if (!store.solverAlgorithm) store.solverAlgorithm = "greedy";
 
-    // Инициализируем значение селектора из store (на случай будущих сохранений/восстановлений).
-    ui.testMode.algorithmSelect.value =
-      store.solverAlgorithm === "equivalent" ? "solve2" : "solve";
+    const sel = ui.testMode.algorithmSelect;
 
-    ui.testMode.algorithmSelect.addEventListener("change", () => {
-      const v = ui.testMode.algorithmSelect.value;
-      store.solverAlgorithm = v === "solve2" ? "equivalent" : "greedy";
+    // Инициализируем значение селектора из store.
+    sel.value =
+      store.solverAlgorithm === "trivial"
+        ? "solve_trivial"
+        : store.solverAlgorithm === "curves"
+          ? "solve_curves"
+          : "solve_greedy";
+
+    sel.addEventListener("change", () => {
+      const v = sel.value;
+      if (v === "solve_trivial") store.solverAlgorithm = "trivial";
+      else if (v === "solve_curves") store.solverAlgorithm = "curves";
+      else store.solverAlgorithm = "greedy";
     });
   }
 
@@ -649,7 +658,11 @@ export const startApp = async () => {
       sync.syncFromActiveEditorIfNeeded();
 
       try {
+        // Почему: validateAndNormalizeState не знает о [stats] и может его отбросить.
+        // Для синтеза stats не нужен, но для отображения/экспорта (TOML/Описание) — нужен.
+        const prevStats = store.state?.stats ?? null;
         store.state = validateAndNormalizeState(store.state);
+        if (prevStats) store.state = { ...store.state, stats: prevStats };
       } catch (e) {
         logError("Проверка входных данных перед синтезом не пройдена", e);
         setStatus(
@@ -669,40 +682,46 @@ export const startApp = async () => {
 
       const system = buildZigSystem(multiheat, store.state, false);
 
-      // Выбор алгоритма синтеза в тестовом режиме.
+      // Выбор алгоритма синтеза.
       //
       // Требования:
-      // - по умолчанию используем жадный алгоритм (solve)
-      // - при выборе пользователем «Эквивалентные кривые» используем solve2
-      // - если включён режим эквивалентных кривых в визуализации — принудительно используем solve2
-      //
-      // Почему: хотим, чтобы селектор был источником истины для синтеза, а store — отражал текущий выбор.
-      if (ui?.testMode?.algorithmSelect) {
-        const v = ui.testMode.algorithmSelect.value;
-        store.solverAlgorithm = v === "solve2" ? "equivalent" : "greedy";
-      } else {
-        // На случай отсутствия селектора (нештатная разметка) — безопасный дефолт.
-        store.solverAlgorithm = "greedy";
-      }
-
-      const selectedName = store.eqCurvesEnabled
-        ? "solve2"
-        : store.solverAlgorithm === "equivalent"
-          ? "solve2"
-          : "solve";
+      // - функции Zig: solve_greedy, solve_curves, solve_trivial
+      // - выбор алгоритма зависит только от выпадающего списка «Алгоритм»
+      // - по умолчанию: жадный алгоритм
+      const algo =
+        store.solverAlgorithm === "trivial"
+          ? "trivial"
+          : store.solverAlgorithm === "curves"
+            ? "curves"
+            : "greedy";
 
       const solveFn =
-        selectedName === "solve2" ? multiheat.solve2 : multiheat.solve;
+        algo === "trivial"
+          ? multiheat.solve_trivial
+          : algo === "curves"
+            ? multiheat.solve_curves
+            : multiheat.solve_greedy;
 
-      if (selectedName === "solve2" && typeof solveFn !== "function") {
+      const usedName =
+        algo === "trivial"
+          ? "solve_trivial"
+          : algo === "curves"
+            ? "solve_curves"
+            : "solve_greedy";
+
+      if (typeof solveFn !== "function") {
+        const human =
+          algo === "trivial"
+            ? "«Без теплообмена»"
+            : algo === "curves"
+              ? "«Эквивалентные кривые»"
+              : "«Жадный»";
         setStatus(
           "err",
-          "Невозможно синтезировать: алгоритм «Эквивалентные кривые» недоступен в модуле вычислений.",
+          `Невозможно синтезировать: алгоритм ${human} недоступен в модуле вычислений.`,
         );
         return;
       }
-
-      const usedName = selectedName;
 
       try {
         solveFn(system);
@@ -721,7 +740,12 @@ export const startApp = async () => {
         exchanger: zigExchangersToState(zigExList),
       };
 
-      store.state = validateAndNormalizeState(next);
+      const normalized = validateAndNormalizeState(next);
+      const stats = computeSolutionStats(normalized, {
+        algorithm_used: usedName,
+      });
+
+      store.state = { ...normalized, stats };
       clearDirtyFlags(store);
 
       views.refreshAllViews(true);
@@ -756,7 +780,11 @@ export const startApp = async () => {
       sync.syncFromActiveEditorIfNeeded();
 
       try {
+        // Почему: validateAndNormalizeState не знает о [stats] и может его отбросить.
+        // При проверке решение/статистика не должны исчезать.
+        const prevStats = store.state?.stats ?? null;
         store.state = validateAndNormalizeState(store.state);
+        if (prevStats) store.state = { ...store.state, stats: prevStats };
       } catch (e) {
         logError(
           "Проверка входных данных перед проверкой решения не пройдена",
@@ -817,7 +845,9 @@ export const startApp = async () => {
     });
 
     const checks = {
-      solve: typeof multiheat?.solve,
+      solve_greedy: typeof multiheat?.solve_greedy,
+      solve_curves: typeof multiheat?.solve_curves,
+      solve_trivial: typeof multiheat?.solve_trivial,
       verifySolution: typeof multiheat?.verifySolution,
       HeatSystem: typeof multiheat?.HeatSystem,
       HeatStream: typeof multiheat?.HeatStream,
@@ -827,7 +857,9 @@ export const startApp = async () => {
     const def = multiheat && "default" in multiheat ? multiheat.default : null;
     const defaultChecks = def
       ? {
-          solve: typeof def?.solve,
+          solve_greedy: typeof def?.solve_greedy,
+          solve_curves: typeof def?.solve_curves,
+          solve_trivial: typeof def?.solve_trivial,
           verifySolution: typeof def?.verifySolution,
           HeatSystem: typeof def?.HeatSystem,
           HeatStream: typeof def?.HeatStream,
@@ -841,7 +873,7 @@ export const startApp = async () => {
     });
 
     const ok =
-      checks.solve === "function" &&
+      checks.solve_greedy === "function" &&
       checks.verifySolution === "function" &&
       checks.HeatSystem === "function" &&
       checks.HeatStream === "function" &&
@@ -854,7 +886,7 @@ export const startApp = async () => {
         exports: summarizeModuleExports(multiheat),
         hint:
           defaultChecks &&
-          defaultChecks.solve === "function" &&
+          defaultChecks.solve_greedy === "function" &&
           defaultChecks.verifySolution === "function"
             ? "Похоже, нужные экспорты находятся под `default`. Это часто проявляется только в production-сборке."
             : null,

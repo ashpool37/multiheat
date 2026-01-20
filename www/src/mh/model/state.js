@@ -10,13 +10,14 @@ import {
 
 /**
  * `defaultState()` → пустое каноническое состояние системы.
- * @returns {{ multiheat: { version: string, temp_unit: string }, hot: any[], cold: any[], exchanger: any[] }}
+ * @returns {{ multiheat: { version: string, temp_unit: string }, hot: any[], cold: any[], exchanger: any[], stats: any|null }}
  */
 export const defaultState = () => ({
   multiheat: { version: "0.0.1", temp_unit: "K" },
   hot: [],
   cold: [],
   exchanger: [],
+  stats: null,
 });
 
 /**
@@ -119,10 +120,14 @@ export const validateAndNormalizeState = (state) => {
   const coldN = cold.map(normalizeStream);
   const exN = exchanger.map(normalizeExchanger);
 
+  const stats = state.stats;
+  const statsN = stats && typeof stats === "object" ? stats : null;
+
   return {
     multiheat: { version: "0.0.1", temp_unit: "K" },
     hot: hotN,
     cold: coldN,
     exchanger: exN,
+    stats: statsN,
   };
 };

@@ -89,7 +89,7 @@ fn maxTransferable(
     }
 }
 
-pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
+pub fn solve_greedy(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
     const dt_min: f32 = @floatFromInt(system.min_dt);
 
     const hot_count = system.hot_streams.len;
@@ -276,7 +276,50 @@ pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
     system.exchangers = try exchangers.toOwnedSlice(allocator);
 }
 
+// --- Совместимые алиасы (старый API) ---
+
+pub fn solve(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
+    return solve_greedy(allocator, system);
+}
+
 pub fn solve2(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
+    return solve_curves(allocator, system);
+}
+
+// --- Новый алгоритм: без теплообмена (только утилиты) ---
+
+pub fn solve_trivial(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
+    var exchangers = try std.ArrayList(common.HeatExchanger).initCapacity(allocator, 0);
+    errdefer exchangers.deinit(allocator);
+
+    const eps: f32 = 1e-6;
+
+    // Каждый горячий поток полностью охлаждаем холодильником (утилита).
+    for (system.hot_streams, 0..) |s, i| {
+        const q = computeRequiredLoad(s);
+        if (!(q > eps)) continue;
+        try exchangers.append(allocator, .{
+            .hot_end = @intCast(i),
+            .cold_end = null,
+            .load_MW = q,
+        });
+    }
+
+    // Каждый холодный поток полностью нагреваем нагревателем (утилита).
+    for (system.cold_streams, 0..) |s, j| {
+        const q = computeRequiredLoad(s);
+        if (!(q > eps)) continue;
+        try exchangers.append(allocator, .{
+            .hot_end = null,
+            .cold_end = @intCast(j),
+            .load_MW = q,
+        });
+    }
+
+    system.exchangers = try exchangers.toOwnedSlice(allocator);
+}
+
+pub fn solve_curves(allocator: std.mem.Allocator, system: *common.HeatSystem) !void {
     // Алгоритм синтеза по методологии диссертации (через эквивалентную двухпоточную модель)
     // в детерминированной инженерной интерпретации:
     //
