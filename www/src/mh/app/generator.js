@@ -36,16 +36,32 @@
  * Примечание:
  * - Для неизотермических потоков мы генерируем {in, out, load}.
  *   Это совместимо с текущей канонической моделью (out+load => rate восстанавливается).
- * - Чтобы гарантировать “все горячие теплее всех холодных”, мы после генерации
- *   при необходимости сдвигаем все температуры hot вверх так, чтобы min(hot) >= max(cold) + ΔT_guard.
+ * - Температуры «горячих» и «холодных» потоков генерируются независимо: «горячий» означает «отдающий тепло»,
+ *   а не «более высокая температура». Никакого искусственного «разнесения» температур не делаем.
  */
 
 import { validateAndNormalizeState } from "../model/state.js";
 
-const DEFAULT_GUARD_DT_K = 20;
 const DEFAULT_NONISO_DT_K = 30;
 
 const clamp = (min, v, max) => Math.max(min, Math.min(max, v));
+
+/**
+ * Округлить число до 5 значащих цифр.
+ *
+ * Требование генератора: все сгенерированные температуры и нагрузки округляем именно так,
+ * чтобы значения были «компактными» и стабильно отображались/экспортировались.
+ *
+ * @param {number} x
+ * @returns {number}
+ */
+const roundSig5 = (x) => {
+  const v = Number(x);
+  if (!Number.isFinite(v)) return v;
+  if (v === 0) return 0;
+  // toPrecision возвращает строку (в т.ч. в экспоненциальной форме) — parseFloat корректно её парсит.
+  return Number.parseFloat(v.toPrecision(5));
+};
 
 /** @param {any} v */
 const toNumber = (v) => {
@@ -286,11 +302,13 @@ const generateStreamsForSide = (side, p) => {
     let tin = sampleTempK(p.temp);
     if (!Number.isFinite(tin)) tin = 300;
     tin = Math.max(1, tin);
+    tin = roundSig5(tin);
 
     // Нагрузка
     let q = samplePositiveLoadMW(p.load);
     if (!Number.isFinite(q)) q = 1;
     q = Math.max(1e-6, q);
+    q = roundSig5(q);
 
     if (iso) {
       out.push({ in: tin, load: q });
@@ -301,95 +319,39 @@ const generateStreamsForSide = (side, p) => {
     //
     // Важно: не допускаем отрицательных температур, чтобы `validateAndNormalizeState()`
     // не отверг сгенерированную систему при “экзотических” параметрах пользователя.
-    const dT = sampleNonIsoDeltaTK();
+    let dT = sampleNonIsoDeltaTK();
+    if (!Number.isFinite(dT)) dT = DEFAULT_NONISO_DT_K;
+    dT = clamp(5, Math.abs(dT), 120);
+    dT = roundSig5(dT);
 
     if (side === "hot") {
       // Гарантируем tout >= 1 K при заданном dT.
-      if (tin - dT < 1) tin = 1 + dT;
+      if (tin - dT < 1) tin = roundSig5(1 + dT);
     } else {
       // Для холодной стороны ограничение снизу достаточно обеспечить только для tin.
-      tin = Math.max(1, tin);
+      tin = roundSig5(Math.max(1, tin));
     }
 
     let tout = side === "hot" ? tin - dT : tin + dT;
     tout = Math.max(1, tout);
+    tout = roundSig5(tout);
 
-    // Если из-за ограничений всё же получилось ровно tin==tout — делаем маленький сдвиг.
-    if (tout === tin) tout = side === "hot" ? tin - 1e-3 : tin + 1e-3;
+    // После округления до 5 значащих цифр может получиться tin == tout (например, при очень малом dT).
+    // В этом случае делаем минимальный сдвиг, который не «съедается» округлением.
+    if (tout === tin) {
+      const eps = 1e-2; // 0.01 K
+      tout = roundSig5(side === "hot" ? Math.max(1, tin - eps) : tin + eps);
+
+      if (tout === tin) {
+        const eps2 = 1e-1; // запасной вариант
+        tout = roundSig5(side === "hot" ? Math.max(1, tin - eps2) : tin + eps2);
+      }
+    }
 
     out.push({ in: tin, out: tout, load: q });
   }
 
   return out;
-};
-
-/**
- * Получить max температуры у набора потоков.
- * @param {any[]} streams
- */
-const maxTempK = (streams) => {
-  let m = Number.NEGATIVE_INFINITY;
-  for (const s of streams || []) {
-    const a = toNumber(s?.in);
-    const b = s?.out === undefined ? a : toNumber(s?.out);
-    if (Number.isFinite(a)) m = Math.max(m, a);
-    if (Number.isFinite(b)) m = Math.max(m, b);
-  }
-  return Number.isFinite(m) ? m : 0;
-};
-
-/**
- * Получить min температуры у набора потоков.
- * @param {any[]} streams
- */
-const minTempK = (streams) => {
-  let m = Number.POSITIVE_INFINITY;
-  for (const s of streams || []) {
-    const a = toNumber(s?.in);
-    const b = s?.out === undefined ? a : toNumber(s?.out);
-    if (Number.isFinite(a)) m = Math.min(m, a);
-    if (Number.isFinite(b)) m = Math.min(m, b);
-  }
-  return Number.isFinite(m) ? m : 0;
-};
-
-/**
- * Сдвинуть температуры всех потоков на +deltaK.
- * @param {any[]} streams
- * @param {number} deltaK
- */
-const shiftTemps = (streams, deltaK) => {
-  if (!Array.isArray(streams)) return;
-  const d = Number(deltaK) || 0;
-  if (!(d !== 0)) return;
-
-  for (const s of streams) {
-    if (!s || typeof s !== "object") continue;
-    if (s.in !== undefined) s.in = Number(s.in) + d;
-    if (s.out !== undefined) s.out = Number(s.out) + d;
-  }
-};
-
-/**
- * Гарантировать корректность: все горячие температуры выше всех холодных на ΔT_guard.
- *
- * @param {any[]} hot
- * @param {any[]} cold
- * @param {number} guardK
- */
-const enforceSeparation = (hot, cold, guardK) => {
-  const guard = Math.max(0, Number(guardK) || 0);
-
-  const coldMax = maxTempK(cold);
-  const hotMin = minTempK(hot);
-
-  // Требуем: hotMin >= coldMax + guard
-  const need = coldMax + guard - hotMin;
-
-  if (need > 0) {
-    // Чуть-чуть больше, чтобы строгие неравенства (если нужны) не упирались в округление.
-    shiftTemps(hot, need + 1e-3);
-  }
 };
 
 /**
@@ -439,9 +401,6 @@ export const createGeneratorController = ({ ui, store, refreshAllViews }) => {
     // Генерация потоков.
     const hot = generateStreamsForSide("hot", hotParams);
     const cold = generateStreamsForSide("cold", coldParams);
-
-    // Гарантия разнесения температур (hot выше cold).
-    enforceSeparation(hot, cold, DEFAULT_GUARD_DT_K);
 
     // Формируем новое состояние (без решения) и нормализуем его так же,
     // как при импорте из TOML/CSV (единые правила канонической модели).
